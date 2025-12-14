@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* ✅ ประกาศ Dark Mode แบบ Class-based สำหรับ v4 */
+@variant dark (&:where(.dark, .dark *));
+
+/* Custom Base Styles */
+@layer base {
+  body {
+    background-color: #e5e7eb;
+    /* Light mode bg */
+    color: #111827;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark mode overrides */
+  .dark body {
+    background-color: #09090b;
+    /* Dark mode bg */
+    color: #fafafa;
+  }
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #52525b;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
