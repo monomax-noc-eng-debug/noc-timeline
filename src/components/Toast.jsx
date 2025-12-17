@@ -1,56 +1,30 @@
 import React, { useEffect } from 'react';
-import { CheckCircle2, AlertCircle, X, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, X } from 'lucide-react';
 
-export default function ToastContainer({ toasts, removeToast }) {
-  return (
-    <div className="fixed bottom-6 right-6 z-100 flex flex-col gap-3 pointer-events-none">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} removeToast={removeToast} />
-      ))}
-    </div>
-  );
-}
-
-function ToastItem({ toast, removeToast }) {
+export default function Toast({ message, type = 'success', onClose }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      removeToast(toast.id);
-    }, 3000); // 3 วินาทีหายไปเอง
+      onClose();
+    }, 3000);
     return () => clearTimeout(timer);
-  }, [toast.id, removeToast]);
+  }, [onClose]);
 
-  // เลือกสีและไอคอนตามประเภท
-  const isSuccess = toast.type === 'success';
-  const bgColor = isSuccess ? 'bg-white dark:bg-zinc-800' : 'bg-white dark:bg-zinc-800';
-  const borderColor = isSuccess ? 'border-emerald-500' : 'border-red-500';
-  const iconColor = isSuccess ? 'text-emerald-500' : 'text-red-500';
-  const Icon = isSuccess ? CheckCircle2 : XCircle;
+  const isSuccess = type === 'success';
 
   return (
-    <div
-      className={`
-        pointer-events-auto flex items-center gap-3 px-4 py-3 min-w-75
-        rounded-xl shadow-lg border-l-4 ${bgColor} ${borderColor}
-        animate-in slide-in-from-right fade-in duration-300
-      `}
-    >
-      <div className={iconColor}>
-        <Icon size={24} />
+    <div className="fixed top-5 right-5 z-[80] animate-in slide-in-from-right duration-300">
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border ${isSuccess
+          ? 'bg-[#1F2937] border-gray-300 text-white dark:bg-[#F2F2F2] dark:text-[#000000]'
+          : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+        {isSuccess ? <CheckCircle2 size={20} className="text-gray-300 dark:text-[#333]" /> : <XCircle size={20} className="text-red-500" />}
+
+        <p className="text-sm font-bold pr-2">{message}</p>
+
+        <button onClick={onClose} className={`p-1 rounded-full hover:bg-white/10 ${isSuccess ? 'text-gray-300' : 'text-red-400'}`}>
+          <X size={14} />
+        </button>
       </div>
-      <div className="flex-1">
-        <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-          {isSuccess ? 'Success' : 'Error'}
-        </h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-          {toast.message}
-        </p>
-      </div>
-      <button
-        onClick={() => removeToast(toast.id)}
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-      >
-        <X size={16} />
-      </button>
     </div>
   );
 }

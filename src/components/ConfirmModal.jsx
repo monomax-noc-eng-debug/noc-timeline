@@ -1,57 +1,48 @@
 import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, HelpCircle } from 'lucide-react';
 
-export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
+export default function ConfirmModal({ isOpen, onClose, title, message, onConfirm, isDanger = false }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center p-4">
-      {/* Backdrop (พื้นหลังมัว) */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      ></div>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl border border-gray-200 overflow-hidden dark:bg-[#111] dark:border-[#333]">
 
-      {/* Modal Box */}
-      <div className="relative bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-zinc-700 p-6 animate-in zoom-in-95 duration-200">
-
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
-        >
-          <X size={20} />
-        </button>
-
-        {/* Icon & Title */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle size={32} />
+        {/* Header */}
+        <div className={`px-4 py-3 flex items-center gap-3 border-b border-gray-200 ${isDanger ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-[#000]'}`}>
+          <div className={`p-2 rounded-full ${isDanger ? 'bg-red-100 text-red-600' : 'bg-[#1F2937] text-white dark:bg-[#F2F2F2] dark:text-[#000000]'}`}>
+            {isDanger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}
           </div>
-          <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
-            {title || 'Confirm Delete?'}
+          <h3 className={`font-bold text-lg ${isDanger ? 'text-red-700 dark:text-red-400' : 'text-[#1F2937] dark:text-[#F2F2F2]'}`}>
+            {title}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 font-medium">
-            {message || 'This action cannot be undone.'}
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+          <p className="text-gray-700 dark:text-[#F2F2F2] text-sm leading-relaxed font-medium">
+            {message}
           </p>
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3">
+        {/* Footer */}
+        <div className="p-3 bg-gray-50 flex justify-end gap-2 border-t border-gray-200 dark:bg-[#000] dark:border-[#333]">
           <button
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-zinc-700 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors uppercase text-xs tracking-widest"
+            className="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:bg-gray-200 dark:hover:bg-[#222] dark:hover:text-[#F2F2F2] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-500/30 transition-all uppercase text-xs tracking-widest border-2 border-transparent"
+            className={`px-4 py-2 rounded-lg text-sm font-bold text-white shadow-md transition-transform active:scale-95 ${isDanger
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-[#1F2937] hover:bg-black dark:bg-[#F2F2F2] dark:text-[#000000] dark:hover:bg-[#ccc]'
+              }`}
           >
-            Delete
+            Confirm
           </button>
         </div>
-
       </div>
     </div>
   );
