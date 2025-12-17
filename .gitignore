@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Security (สำคัญมาก! ต้องมีเพื่อกัน Key หลุด)
+.env
+.env.local
+*.env

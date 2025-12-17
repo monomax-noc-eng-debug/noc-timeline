@@ -1,55 +1,63 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Sun, Moon, Check } from 'lucide-react'; // ลบ Activity ออกเพราะไม่ใช้แล้ว
+import { NavLink, Link } from 'react-router-dom'; // ✅ Import Link และ NavLink
+import { LayoutDashboard, ClipboardList, Calendar, Sun, Moon, Check } from 'lucide-react';
 
 export default function MainLayout({
-  children, activeTab, setActiveTab,
+  children,
   currentUser, setCurrentUser, nocMembers,
   darkMode, setDarkMode
 }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+  // Config เมนู
+  const MENUS = [
+    { path: '/incidents', label: 'incidents', icon: <LayoutDashboard size={16} /> },
+    { path: '/handover', label: 'handover', icon: <ClipboardList size={16} /> },
+    { path: '/schedule', label: 'schedule', icon: <Calendar size={16} /> },
+  ];
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden transition-colors duration-300 bg-[#F3F4F6] dark:bg-[#000000]">
 
-      {/* --- NAVBAR --- */}
-      <nav className="h-16 shrink-0 z-50 flex justify-between items-center px-4 lg:px-6 
-        bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-[#333] shadow-sm">
+      {/* ✅ เริ่มต้น NAV */}
+      <nav className="h-16 shrink-0 z-50 flex justify-between items-center px-4 lg:px-6 bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-[#333] shadow-sm">
 
-        {/* Left: Logo & Tabs */}
+        {/* Left Side: Logo & Tabs */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            {/* ✅ LOGO: เปลี่ยนเป็นตัว N */}
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md 
-              bg-[#1F2937] text-white dark:bg-[#F2F2F2] dark:text-[#000000]">
+
+          {/* ✅ Logo (กดแล้วกลับหน้าแรก) */}
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-[#1F2937] text-white dark:bg-[#F2F2F2] dark:text-[#000000]">
               <span className="text-xl font-black leading-none">N</span>
             </div>
-
             <div className="hidden sm:block">
-              {/* ✅ TITLE: เปลี่ยนเป็น NOCNTT */}
               <h1 className="text-lg font-black tracking-tighter uppercase leading-none text-[#1F2937] dark:text-[#F2F2F2]">NOCNTT</h1>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Managament System</p>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">Command Center</p>
             </div>
-          </div>
+          </Link>
 
-          {/* Tab Switcher */}
+          {/* ✅ Tab Switcher (ใช้ NavLink) */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-[#000000] border border-gray-200 dark:border-[#333]">
-            {['incidents', 'handover'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all 
-                  ${activeTab === tab
+            {MENUS.map((menu) => (
+              <NavLink
+                key={menu.path}
+                to={menu.path}
+                className={({ isActive }) => `
+                  flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all
+                  ${isActive
                     ? 'bg-white dark:bg-[#333] shadow-sm text-[#1F2937] dark:text-[#F2F2F2]'
-                    : 'text-gray-500 hover:text-[#1F2937] dark:text-[#666] dark:hover:text-[#F2F2F2]'}`}
+                    : 'text-gray-500 hover:text-[#1F2937] dark:text-[#666] dark:hover:text-[#F2F2F2]'
+                  }
+                `}
               >
-                {tab === 'incidents' ? <LayoutDashboard size={16} /> : <ClipboardList size={16} />}
-                <span className="hidden sm:inline">{tab}</span>
-              </button>
+                {menu.icon}
+                <span className="hidden sm:inline">{menu.label}</span>
+              </NavLink>
             ))}
           </div>
         </div>
 
-        {/* Right: User & Theme */}
+        {/* Right Side: User Menu */}
         <div className="flex items-center">
           <div className="relative">
             <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center gap-3 focus:outline-none group pl-2">
@@ -107,12 +115,12 @@ export default function MainLayout({
             )}
           </div>
         </div>
-      </nav>
 
-      {/* --- CONTENT AREA --- */}
+      </nav>
+      {/* ✅ ปิด NAV ตรงนี้ */}
+
       <main className="flex-1 overflow-hidden relative p-0 lg:p-6">
-        <div className="w-full h-full shadow-xl overflow-hidden border relative lg:rounded-2xl 
-          bg-[#F3F4F6] dark:bg-[#000000] border-gray-200 dark:border-[#333]">
+        <div className="w-full h-full shadow-xl overflow-hidden border relative lg:rounded-2xl bg-[#F3F4F6] dark:bg-[#000000] border-gray-200 dark:border-[#333]">
           {children}
         </div>
       </main>

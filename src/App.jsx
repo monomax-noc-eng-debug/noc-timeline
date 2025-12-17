@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from './components/MainLayout';
 import TimelinePage from './pages/TimelinePage';
-import ShiftHandoverPage from './pages/ShiftHandoverPage'; // ใช้ไฟล์ใหม่ที่เราทำก่อนหน้านี้
+import ShiftHandoverPage from './pages/ShiftHandoverPage';
+import SchedulePage from './pages/SchedulePage';
+import WelcomePage from './pages/WelcomePage';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Config User List
 const NOC_MEMBERS = [
@@ -14,7 +17,7 @@ const NOC_MEMBERS = [
 
 export default function App() {
   // Global State (Theme & User)
-  const [activeTab, setActiveTab] = useState('incidents');
+
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [currentUser, setCurrentUser] = useState(NOC_MEMBERS[0].name);
 
@@ -31,13 +34,20 @@ export default function App() {
 
   return (
     <MainLayout
-      activeTab={activeTab} setActiveTab={setActiveTab}
-      currentUser={currentUser} setCurrentUser={setCurrentUser}
+
+      currentUser={currentUser}
+      setCurrentUser={setCurrentUser}
       nocMembers={NOC_MEMBERS}
-      darkMode={darkMode} setDarkMode={setDarkMode}
+      darkMode={darkMode}
+      setDarkMode={setDarkMode}
     >
-      {activeTab === 'incidents' && <TimelinePage currentUser={currentUser} />}
-      {activeTab === 'handover' && <ShiftHandoverPage currentUser={currentUser} nocMembers={NOC_MEMBERS} />}
+
+      <Routes>
+        <Route path="/" element={<WelcomePage currentUser={currentUser} />} />
+        <Route path="/incidents" element={<TimelinePage currentUser={currentUser} />} />
+        <Route path="/handover" element={<ShiftHandoverPage currentUser={currentUser} nocMembers={NOC_MEMBERS} />} />
+        <Route path="/schedule" element={<SchedulePage />} />
+      </Routes>
     </MainLayout>
   );
 }
