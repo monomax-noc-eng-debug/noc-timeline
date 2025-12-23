@@ -8,5 +8,5 @@ export default defineConfig({
     react(),
     tailwindcss(), // 👈 ต้องมีบรรทัดนี้สำหรับ Tailwind v4
   ],
-  base: '/',
+  base: './',
 })

@@ -44,7 +44,14 @@ export default function App() {
                 <Route path="/" element={<WelcomePage />} />
                 <Route path="/schedule/today" element={<TodayPage />} />
                 <Route path="/schedule/history" element={<HistoryPage />} />
-                <Route path="/tickets" element={<TicketLogPage />} />
+                <Route
+                  path="/tickets"
+                  element={
+                    <ProtectedRoute>
+                      <TicketLogPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/incidents" element={<TimelinePage />} />
                 <Route path="/handover" element={<ShiftHandoverPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

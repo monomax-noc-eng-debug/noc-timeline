@@ -73,7 +73,13 @@ export default function Sidebar({ onCloseMobile, isCollapsed = false, toggleColl
         <NavItem to="/schedule/history" icon={Calendar} label="Archive" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
 
         <div className={`mt-6 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>Controls</div>
-        <NavItem to="/tickets" icon={Archive} label="Tickets" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+        <NavItem
+          to="/tickets"
+          icon={Archive}
+          label="Ticket Log"
+          isCollapsed={isCollapsed}
+          handleLinkClick={handleLinkClick}
+        />
         <NavItem to="/incidents" icon={AlertTriangle} label="Incidents" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
         <NavItem to="/handover" icon={FileText} label="Handover" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
 
