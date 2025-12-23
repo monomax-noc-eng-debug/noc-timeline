@@ -1,45 +1,63 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 
+/* ✅ เพิ่มบรรทัดนี้: บังคับให้ Dark Mode ทำงานเมื่อมี class="dark" */
 @variant dark (&:where(.dark, .dark *));
 
-@layer base {
-  body {
-    /* Light Mode: พื้นเทาอ่อน (Cool Grey) ตัวหนังสือเทาเข้ม (ไม่ดำสนิท) */
-    background-color: #F3F4F6;
-    color: #1F2937;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Global Reset */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+body {
+  /* เพิ่ม transition-colors เพื่อให้ตอนเปลี่ยนโหมดดูสมูท */
+  @apply bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100 antialiased min-h-screen transition-colors duration-300;
+}
+
+/* Scrollbar */
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-
-  /* Dark Mode: ยังคงเข้มขรึม */
-  .dark body {
-    background-color: #000000;
-    color: #F2F2F2;
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-zinc-300 dark:bg-zinc-800 rounded-full;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-400 dark:bg-zinc-700;
   }
 }
 
-/* Scrollbar ปรับให้นุ่มขึ้น */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+/* Calendar Fixes */
+.fc {
+  --fc-border-color: rgba(229, 231, 235, 0.5);
+  --fc-today-bg-color: rgba(0, 0, 0, 0.03);
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #e5e7eb;
+  --fc-button-text-color: #374151;
+  --fc-button-hover-bg-color: #f9fafb;
+  --fc-button-hover-border-color: #d1d5db;
+  --fc-button-active-bg-color: #f3f4f6;
 }
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #D1D5DB;
-  /* Light Grey Scrollbar */
-  border-radius: 10px;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #333;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.08);
+  --fc-today-bg-color: rgba(255, 255, 255, 0.05);
+  --fc-page-bg-color: #000;
+  --fc-button-bg-color: #18181b;
+  --fc-button-border-color: #27272a;
+  --fc-button-text-color: #e4e4e7;
+  --fc-button-hover-bg-color: #27272a;
+  --fc-button-hover-border-color: #3f3f46;
+  --fc-button-active-bg-color: #27272a;
+  color: #a1a1aa;
 }

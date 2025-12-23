@@ -1,53 +1,59 @@
-import React, { useState, useEffect } from 'react';
+// file: src/App.jsx
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useStore } from './store/useStore';
 import MainLayout from './components/MainLayout';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import WelcomePage from './pages/WelcomePage';
 import TimelinePage from './pages/TimelinePage';
 import ShiftHandoverPage from './pages/ShiftHandoverPage';
-import SchedulePage from './pages/SchedulePage';
-import WelcomePage from './pages/WelcomePage';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import TicketLogPage from './pages/TicketLogPage';
+import TodayPage from './pages/schedule/TodayPage';
+import HistoryPage from './pages/schedule/HistoryPage';
 
-// Config User List
-const NOC_MEMBERS = [
-  { id: 'NOC-1', name: 'Mekin S.', role: 'NOC' },
-  { id: 'NOC-2', name: 'Akkapol P.', role: 'NOC' },
-  { id: 'NOC-3', name: 'Nawapat R.', role: 'NOC' },
-  { id: 'NOC-4', name: 'Watcharapol P.', role: 'NOC' },
-  { id: 'NOC-5', name: 'Supporter', role: 'NOC' }
-];
+// ตัวกั้นประตู: ถ้าไม่มี User ให้เด้งไป Login
+const ProtectedRoute = ({ children }) => {
+  const currentUser = useStore((state) => state.currentUser);
+  if (!currentUser) return <Navigate to="/login" replace />;
+  return children;
+};
 
 export default function App() {
-  // Global State (Theme & User)
+  const darkMode = useStore((state) => state.darkMode);
 
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-  const [currentUser, setCurrentUser] = useState(NOC_MEMBERS[0].name);
-
-  // Theme Effect
+  // Sync Class 'dark' กับ html tag
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    if (darkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
   return (
-    <MainLayout
+    <Routes>
+      {/* 1. หน้า Login (ไม่มี Sidebar) */}
+      <Route path="/login" element={<LoginPage />} />
 
-      currentUser={currentUser}
-      setCurrentUser={setCurrentUser}
-      nocMembers={NOC_MEMBERS}
-      darkMode={darkMode}
-      setDarkMode={setDarkMode}
-    >
-
-      <Routes>
-        <Route path="/" element={<WelcomePage currentUser={currentUser} />} />
-        <Route path="/incidents" element={<TimelinePage currentUser={currentUser} />} />
-        <Route path="/handover" element={<ShiftHandoverPage currentUser={currentUser} nocMembers={NOC_MEMBERS} />} />
-        <Route path="/schedule" element={<SchedulePage />} />
-      </Routes>
-    </MainLayout>
+      {/* 2. หน้าใช้งานจริง (มี Sidebar) - ต้อง Login ก่อน */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Routes>
+                <Route path="/" element={<WelcomePage />} />
+                {/* ❌ ลบ Route /dashboard ออก */}
+                <Route path="/schedule/today" element={<TodayPage />} />
+                <Route path="/schedule/history" element={<HistoryPage />} />
+                <Route path="/tickets" element={<TicketLogPage />} />
+                <Route path="/incidents" element={<TimelinePage />} />
+                <Route path="/handover" element={<ShiftHandoverPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }

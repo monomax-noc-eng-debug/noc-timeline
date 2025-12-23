@@ -1,107 +1,64 @@
+// file: src/pages/WelcomePage.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Calendar, ArrowRight, Activity, Clock, Shield } from 'lucide-react';
+// ❌ เอา Zap ออก
+import { Calendar, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { useDashboardStats } from '../features/dashboard/hooks/useDashboardStats';
 
-export default function WelcomePage({ currentUser }) {
+export default function WelcomePage() {
   const navigate = useNavigate();
-
-  // ข้อมูลเมนูต่างๆ
-  const MENU_ITEMS = [
-    {
-      title: 'Incidents Timeline',
-      description: 'Monitor and track real-time system incidents.',
-      icon: <LayoutDashboard size={32} />,
-      path: '/incidents',
-      color: 'bg-blue-600',
-      stat: 'Live Monitoring'
-    },
-    {
-      title: 'Shift Handover',
-      description: 'Create and view shift summary reports.',
-      icon: <ClipboardList size={32} />,
-      path: '/handover',
-      color: 'bg-emerald-600',
-      stat: 'Shift Reports'
-    },
-    {
-      title: 'Schedule',
-      description: 'Check team shifts and sport match schedules.',
-      icon: <Calendar size={32} />,
-      path: '/schedule',
-      color: 'bg-purple-600',
-      stat: 'Upcoming Matches'
-    }
-  ];
+  const currentUser = useStore((state) => state.currentUser);
+  const { todaySummary, activeIncidents } = useDashboardStats();
 
   return (
-    <div className="h-full w-full p-6 lg:p-10 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center">
+    <div className="h-full bg-zinc-50 dark:bg-black p-8 md:p-12 overflow-y-auto custom-scrollbar flex flex-col justify-center">
+      <div className="max-w-5xl mx-auto w-full space-y-12">
 
-      {/* Header Section */}
-      <div className="text-center max-w-2xl mb-12 animate-in slide-in-from-bottom-4 fade-in duration-500">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-[#222] border border-gray-200 dark:border-[#333] mb-6">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">System Operational</span>
-        </div>
-
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#1F2937] dark:text-[#F2F2F2] mb-4">
-          Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">{currentUser}</span>
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">
-          NOCNTT Command Center. Select a module to start working.
-        </p>
-      </div>
-
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
-        {MENU_ITEMS.map((item, index) => (
-          <div
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className="group relative bg-white dark:bg-[#111] border border-gray-200 dark:border-[#333] rounded-2xl p-6 hover:shadow-xl hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all duration-300 cursor-pointer animate-in slide-in-from-bottom-8 fade-in"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <div className="flex justify-between items-start mb-6">
-              <div className={`p-3 rounded-xl text-white shadow-lg ${item.color} group-hover:scale-110 transition-transform duration-300`}>
-                {item.icon}
-              </div>
-              <div className="bg-gray-50 dark:bg-[#222] px-2 py-1 rounded text-[10px] font-bold uppercase text-gray-400 group-hover:text-blue-500 transition-colors">
-                {item.stat}
-              </div>
-            </div>
-
-            <h3 className="text-xl font-bold text-[#1F2937] dark:text-[#F2F2F2] mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              {item.title}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 line-clamp-2">
-              {item.description}
-            </p>
-
-            <div className="flex items-center text-sm font-bold text-blue-600 dark:text-blue-400 opacity-0 transform translate-x-[-10px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-              OPEN MODULE <ArrowRight size={16} className="ml-2" />
-            </div>
+        {/* Hero Section */}
+        <div>
+          {/* ✅ แก้ไขชื่อเว็บ */}
+          <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter dark:text-white mb-4 leading-[0.9]">
+            NOC <span className="text-zinc-300 dark:text-zinc-700">NTT</span> <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-600">Management System</span>
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <p className="text-sm font-bold text-zinc-500 uppercase tracking-[0.2em]">System Operational • Welcome, {currentUser}</p>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Footer Info */}
-      <div className="mt-16 grid grid-cols-3 gap-8 text-center border-t border-gray-200 dark:border-[#333] pt-8 w-full max-w-2xl">
-        <div className="flex flex-col items-center gap-1">
-          <Activity size={20} className="text-gray-400 mb-1" />
-          <span className="text-xs font-bold text-gray-400 uppercase">Uptime 99.9%</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <Shield size={20} className="text-gray-400 mb-1" />
-          <span className="text-xs font-bold text-gray-400 uppercase">Secure Connection</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <Clock size={20} className="text-gray-400 mb-1" />
-          <span className="text-xs font-bold text-gray-400 uppercase">24/7 Monitoring</span>
+        {/* Cards Grid - ❌ ปรับเหลือ 2 คอลัมน์พอกว้างๆ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Today Card */}
+          <div onClick={() => navigate('/schedule/today')} className="group bg-white dark:bg-[#111] p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 hover:border-black dark:hover:border-white transition-all cursor-pointer">
+            <div className="flex justify-between items-start mb-10">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl text-zinc-900 dark:text-white"><Calendar size={28} /></div>
+              <ArrowRight className="text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-5xl font-black dark:text-white mb-2">{todaySummary.total}</div>
+            <div className="text-xs font-black text-zinc-400 uppercase tracking-widest">Matches Scheduled Today</div>
+          </div>
+
+          {/* Incidents Card */}
+          <div onClick={() => navigate('/incidents')} className="group bg-white dark:bg-[#111] p-8 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 hover:border-red-500 dark:hover:border-red-500 transition-all cursor-pointer relative overflow-hidden">
+            {activeIncidents > 0 && <div className="absolute top-0 right-0 p-4"><span className="flex h-4 w-4 rounded-full bg-red-500 animate-pulse"></span></div>}
+            <div className="flex justify-between items-start mb-10">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl text-red-500"><AlertTriangle size={28} /></div>
+              <ArrowRight className="text-zinc-300 group-hover:text-red-500 transition-colors" />
+            </div>
+            <div className="text-5xl font-black dark:text-white mb-2">{activeIncidents}</div>
+            <div className="text-xs font-black text-zinc-400 uppercase tracking-widest">Active Incidents</div>
+          </div>
+
+          {/* ❌ ลบ Stats Card ออกแล้ว */}
+
         </div>
       </div>
-
     </div>
   );
 }

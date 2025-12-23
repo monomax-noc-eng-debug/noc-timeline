@@ -1,72 +1,243 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import { useIncidents } from '../features/cases/hooks/useIncidents';
+import { useEvents } from '../features/cases/hooks/useEvents';
+import { useStore } from '../store/useStore';
+import { incidentService } from '../services/incidentService';
+
 import CaseList from '../features/cases/CaseList';
 import CaseDetail from '../features/cases/CaseDetail';
-import Toast from '../components/Toast';
-import ConfirmModal from '../components/ConfirmModal';
-import { useIncidents } from '../hooks/useIncidents';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import Toast from '../components/ui/Toast';
 
-export default function TimelinePage({ currentUser }) {
+export default function TimelinePage() {
+  const { currentUser } = useStore();
+
   const {
     incidents,
+    filteredIncidents,
+    selectedId,
+    setSelectedId,
     loading,
-    isEventsLoading,
-    selectedIncidentId,
-    setSelectedIncidentId,
-    handleSelectIncident,
-    handleCreate,
-    handleUpdate,
-    requestDelete,
-    handleAddEvent,
-    handleUpdateEvent,
-    requestDeleteEvent,
-    handleReorderEvents,
-    toast,
-    setToast,
-    confirmConfig,
-    setConfirmConfig,
-    executeConfirmAction,
-    handleExportCSV
-  } = useIncidents(currentUser);
+    stats,
+    searchTerm, setSearchTerm,
+    filterStatus, setFilterStatus,
+    filterType, setFilterType,
+    clearFilters,
+    hasActiveFilters
+  } = useIncidents();
 
-  const activeIncident = incidents.find(inc => inc.id === selectedIncidentId);
+  const { sortedEvents, loading: eventsLoading } = useEvents(selectedId);
 
-  if (loading && incidents.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-black dark:border-zinc-700 dark:border-t-white rounded-full animate-spin"></div>
-        <span className="text-xs font-bold uppercase tracking-widest">Loading Data...</span>
-      </div>
-    );
-  }
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [saving, setSaving] = useState(false);
+
+  const activeIncident = incidents.find(inc => inc.id === selectedId);
+
+  // Toast helper
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  }, []);
+
+  // --- Actions: Incident ---
+
+  const handleAddIncident = async () => {
+    if (!currentUser) {
+      showToast("Please login first!", 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newDoc = await incidentService.createIncident({
+        subject: 'New Incident',
+        project: 'General',
+        status: 'Open',
+        type: 'Incident',
+        ticket: '',
+        createdBy: currentUser,
+        impact: '',
+        root_cause: '',
+        action: ''
+      });
+      setSelectedId(newDoc.id);
+      showToast('Incident created');
+    } catch (error) {
+      console.error("Error creating incident:", error);
+      showToast(error.message || 'Failed to create incident', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteIncident = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Incident?',
+      message: 'This action cannot be undone. All timeline events will be permanently deleted.',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await incidentService.deleteIncident(id);
+          if (selectedId === id) setSelectedId(null);
+          setConfirmModal({ isOpen: false });
+          showToast('Incident deleted');
+        } catch (error) {
+          console.error("Error deleting incident:", error);
+          showToast(error.message || 'Failed to delete', 'error');
+        }
+      }
+    });
+  };
+
+  const handleUpdateIncident = async (id, data) => {
+    try {
+      await incidentService.updateIncident(id, data);
+    } catch (error) {
+      console.error("Error updating incident:", error);
+      showToast(error.message || 'Failed to update', 'error');
+    }
+  };
+
+  // --- Actions: Events ---
+
+  const handleAddEvent = async (incidentId, data) => {
+    try {
+      await incidentService.createEvent(incidentId, data);
+      showToast('Event added');
+    } catch (error) {
+      console.error("Error adding event:", error);
+      showToast(error.message || 'Failed to add event', 'error');
+    }
+  };
+
+  const handleUpdateEvent = async (incidentId, eventId, data) => {
+    try {
+      await incidentService.updateEvent(incidentId, eventId, data);
+      showToast('Event updated');
+    } catch (error) {
+      console.error("Error updating event:", error);
+      showToast(error.message || 'Failed to update event', 'error');
+    }
+  };
+
+  const handleDeleteEvent = async (incidentId, eventId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Event?',
+      message: 'This timeline event will be permanently removed.',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await incidentService.deleteEvent(incidentId, eventId);
+          setConfirmModal({ isOpen: false });
+          showToast('Event deleted');
+        } catch (error) {
+          console.error("Error deleting event:", error);
+          showToast(error.message || 'Failed to delete event', 'error');
+        }
+      }
+    });
+  };
+
+  const handleReorderEvent = async (incidentId, reorderedEvents) => {
+    try {
+      await incidentService.reorderEvents(incidentId, reorderedEvents);
+    } catch (error) {
+      console.error("Error reordering events:", error);
+      showToast(error.message || 'Failed to reorder', 'error');
+    }
+  };
+
+  // --- Export CSV ---
+
+  const handleExportCSV = (data) => {
+    if (!data || data.length === 0) {
+      showToast("No data to export", 'error');
+      return;
+    }
+
+    const headers = "Date,Project,Ticket,Type,Status,Subject,CreatedBy";
+    const csvContent = [
+      headers,
+      ...data.map(inc => {
+        const dateStr = inc.createdAt ? new Date(inc.createdAt).toLocaleDateString('en-GB') : '-';
+        const subjectEscaped = (inc.subject || '').replace(/"/g, '""');
+        return `"${dateStr}","${inc.project || ''}","${inc.ticket || ''}","${inc.type || ''}","${inc.status}","${subjectEscaped}","${inc.createdBy || ''}"`;
+      })
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Incidents_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+
+    showToast('CSV exported');
+  };
 
   return (
-    <div className="w-full h-full relative">
-      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, show: false }))} />}
-      <ConfirmModal isOpen={confirmConfig.isOpen} onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })} onConfirm={executeConfirmAction} title={confirmConfig.title} message={confirmConfig.message} isDanger={true} />
+    <div className="w-full h-full flex overflow-hidden bg-zinc-50 dark:bg-black">
 
-      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-12">
-        <div className={`lg:col-span-3 h-full border-r-2 border-gray-200 dark:border-[#333] overflow-hidden flex-col ${selectedIncidentId ? 'hidden lg:flex' : 'flex'}`}>
-          <CaseList
-            incidents={incidents}
-            selectedId={selectedIncidentId}
-            onSelect={(id) => handleSelectIncident(id)}
-            onAddIncident={handleCreate}
-            onDeleteIncident={requestDelete}
-            onExportCSV={handleExportCSV}
-          />
-        </div>
-        <div className={`lg:col-span-9 h-full overflow-hidden flex flex-col bg-[#F3F4F6] dark:bg-[#000000] ${selectedIncidentId ? 'absolute inset-0 z-40 lg:relative lg:flex animate-in slide-in-from-right duration-300' : 'hidden lg:flex'}`}>
-          <CaseDetail
-            incident={activeIncident}
-            isLoading={isEventsLoading}
-            onUpdateIncident={handleUpdate}
-            onAddEvent={handleAddEvent}
-            onDeleteEvent={requestDeleteEvent}
-            onUpdateEvent={handleUpdateEvent}
-            onReorderEvent={handleReorderEvents}
-            onBack={() => setSelectedIncidentId(null)}
-          />
-        </div>
+      {/* Toast */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        {...confirmModal}
+      />
+
+      {/* SECTION 1: Case List */}
+      <div className={`
+        h-full border-r border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-[#050505] flex-shrink-0 transition-all duration-300
+        ${selectedId ? 'hidden lg:block lg:w-[350px]' : 'w-full lg:w-[350px]'}
+      `}>
+        <CaseList
+          incidents={incidents}
+          filteredIncidents={filteredIncidents}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onAddIncident={handleAddIncident}
+          onDeleteIncident={handleDeleteIncident}
+          onExportCSV={handleExportCSV}
+          stats={stats}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterType={filterType}
+          setFilterType={setFilterType}
+          clearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+          loading={loading}
+        />
+      </div>
+
+      {/* SECTION 2: Case Detail */}
+      <div className={`
+        h-full flex-1 min-w-0 overflow-hidden bg-white dark:bg-[#09090b] relative
+        ${selectedId ? 'block' : 'hidden lg:block'}
+      `}>
+        <CaseDetail
+          incident={activeIncident ? { ...activeIncident, events: sortedEvents } : null}
+          isLoading={eventsLoading}
+          onBack={() => setSelectedId(null)}
+          onUpdateIncident={handleUpdateIncident}
+          onAddEvent={handleAddEvent}
+          onUpdateEvent={handleUpdateEvent}
+          onDeleteEvent={handleDeleteEvent}
+          onReorderEvent={handleReorderEvent}
+          saving={saving}
+        />
       </div>
     </div>
   );
