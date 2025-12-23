@@ -42,7 +42,6 @@ export default function App() {
             <MainLayout>
               <Routes>
                 <Route path="/" element={<WelcomePage />} />
-                {/* ❌ ลบ Route /dashboard ออก */}
                 <Route path="/schedule/today" element={<TodayPage />} />
                 <Route path="/schedule/history" element={<HistoryPage />} />
                 <Route path="/tickets" element={<TicketLogPage />} />
