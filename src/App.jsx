@@ -31,35 +31,26 @@ export default function App() {
 
   return (
     <Routes>
-      {/* 1. หน้า Login (ไม่มี Sidebar) */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* 2. หน้าใช้งานจริง (มี Sidebar) - ต้อง Login ก่อน */}
+      {/* ใช้ ProtectedRoute คลุม MainLayout และ Route ย่อย */}
       <Route
-        path="/*"
+        path="/"
         element={
           <ProtectedRoute>
-            <MainLayout>
-              <Routes>
-                <Route path="/" element={<WelcomePage />} />
-                <Route path="/schedule/today" element={<TodayPage />} />
-                <Route path="/schedule/history" element={<HistoryPage />} />
-                <Route
-                  path="/tickets"
-                  element={
-                    <ProtectedRoute>
-                      <TicketLogPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/incidents" element={<TimelinePage />} />
-                <Route path="/handover" element={<ShiftHandoverPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </MainLayout>
+            <MainLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        {/* ใช้ Outlet ภายใน MainLayout เพื่อแสดงหน้าย่อย */}
+        <Route index element={<WelcomePage />} />
+        <Route path="schedule/today" element={<TodayPage />} />
+        <Route path="schedule/history" element={<HistoryPage />} />
+        <Route path="tickets" element={<TicketLogPage />} />
+        <Route path="incidents" element={<TimelinePage />} />
+        <Route path="handover" element={<ShiftHandoverPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
     </Routes>
   );
 }
