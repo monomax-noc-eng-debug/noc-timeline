@@ -13,7 +13,10 @@ import TicketLogPage from './pages/TicketLogPage';
 import TodayPage from './pages/schedule/TodayPage';
 import HistoryPage from './pages/schedule/HistoryPage';
 
-// ตัวกั้นประตู: ถ้าไม่มี User ให้เด้งไป Login
+/**
+ * ProtectedRoute: ส่วนตรวจสอบสิทธิ์การเข้าถึง
+ * หากไม่มีผู้ล็อกอิน (currentUser) จะดีดกลับไปหน้า /login ทันที
+ */
 const ProtectedRoute = ({ children }) => {
   const currentUser = useStore((state) => state.currentUser);
   if (!currentUser) return <Navigate to="/login" replace />;
@@ -23,34 +26,50 @@ const ProtectedRoute = ({ children }) => {
 export default function App() {
   const darkMode = useStore((state) => state.darkMode);
 
-  // Sync Class 'dark' กับ html tag
+  // จัดการ Class 'dark' ที่ html tag เพื่อรองรับ Tailwind Dark Mode
   useEffect(() => {
-    if (darkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [darkMode]);
 
   return (
     <Routes>
+      {/* 1. Route สำหรับหน้า Login (ไม่มีแถบ Sidebar) */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* ใช้ ProtectedRoute คลุม MainLayout และ Route ย่อย */}
+      {/* 2. Route หลักที่ต้องผ่านการ Login (มี Sidebar ผ่าน MainLayout) */}
       <Route
-        path="/"
+        path="/*"
         element={
           <ProtectedRoute>
-            <MainLayout />
+            <MainLayout>
+              <Routes>
+                {/* หน้า Dashboard หลัก */}
+                <Route path="/" element={<WelcomePage />} />
+
+                {/* ระบบ Schedule */}
+                <Route path="/schedule/today" element={<TodayPage />} />
+                <Route path="/schedule/history" element={<HistoryPage />} />
+
+                {/* ระบบจัดการ Ticket (หน้าใหม่ที่เพิ่มเข้ามา) */}
+                <Route path="/tickets" element={<TicketLogPage />} />
+
+                {/* ระบบ Timeline และ Incident */}
+                <Route path="/incidents" element={<TimelinePage />} />
+
+                {/* ระบบส่งเวร (Handover) */}
+                <Route path="/handover" element={<ShiftHandoverPage />} />
+
+                {/* กรณีพิมพ์ URL มั่ว ให้ดีดกลับหน้าหลัก */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </MainLayout>
           </ProtectedRoute>
         }
-      >
-        {/* ใช้ Outlet ภายใน MainLayout เพื่อแสดงหน้าย่อย */}
-        <Route index element={<WelcomePage />} />
-        <Route path="schedule/today" element={<TodayPage />} />
-        <Route path="schedule/history" element={<HistoryPage />} />
-        <Route path="tickets" element={<TicketLogPage />} />
-        <Route path="incidents" element={<TimelinePage />} />
-        <Route path="handover" element={<ShiftHandoverPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
+      />
     </Routes>
   );
 }
