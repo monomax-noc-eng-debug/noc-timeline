@@ -7,7 +7,7 @@ import { incidentService } from '../services/incidentService';
 import CaseList from '../features/cases/CaseList';
 import CaseDetail from '../features/cases/CaseDetail';
 import ConfirmModal from '../components/ui/ConfirmModal';
-import Toast from '../components/ui/Toast';
+import { useToast } from "@/hooks/use-toast";
 
 export default function TimelinePage() {
   const { currentUser } = useStore();
@@ -29,16 +29,18 @@ export default function TimelinePage() {
   const { sortedEvents, loading: eventsLoading } = useEvents(selectedId);
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
   const activeIncident = incidents.find(inc => inc.id === selectedId);
 
-  // Toast helper
+  // Toast helper wrapper
   const showToast = useCallback((message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  }, []);
+    toast({
+      description: message,
+      variant: type,
+    });
+  }, [toast]);
 
   // --- Actions: Incident ---
 
@@ -180,14 +182,7 @@ export default function TimelinePage() {
   return (
     <div className="w-full h-full flex overflow-hidden bg-zinc-50 dark:bg-black">
 
-      {/* Toast */}
-      {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-        />
-      )}
+
 
       {/* Confirm Modal */}
       <ConfirmModal

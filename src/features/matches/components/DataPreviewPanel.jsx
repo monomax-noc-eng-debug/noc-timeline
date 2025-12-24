@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 // ❌ ลบ import firebase ที่ไม่จำเป็นออก (ลด bundle size)
 import { convertToGB, parseAbbrev, formatNumber, formatPercent } from '../../../utils/formatters';
-import Toast from '../../../components/ui/Toast';
+import { useToast } from "@/hooks/use-toast";
 
 const DATA_HEADERS = [
   "#", "League", "Match", "Time", "ECS Sport", "ECS Entitlement", "API Huawei",
@@ -18,8 +18,8 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [copyType, setCopyType] = useState('end_stat'); // 'start_stat' or 'end_stat'
   // ❌ ลบ isLoading state เพราะไม่ต้อง fetch แล้ว
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  // ❌ ลบ isLoading state เพราะไม่ต้อง fetch แล้ว
+  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(true);
   const [viewMode, setViewMode] = useState('table');
 
@@ -175,15 +175,19 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
   const handleCopy = (copyAll = false) => {
     const rowsToCopy = copyAll ? formattedRows : selectedRows;
     if (rowsToCopy.length === 0) {
-      setToastMessage('No data to copy');
-      setShowToast(true);
+      toast({
+        description: 'No data to copy',
+        variant: "error",
+      });
       return;
     }
 
     const textToCopy = rowsToCopy.map(row => row.cells.join('\t')).join('\n');
     navigator.clipboard.writeText(textToCopy).then(() => {
-      setToastMessage(`Copied ${rowsToCopy.length} rows to clipboard!`);
-      setShowToast(true);
+      toast({
+        description: `Copied ${rowsToCopy.length} rows to clipboard!`,
+        variant: "success",
+      });
     });
   };
 
@@ -191,14 +195,7 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
 
   return (
     <>
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type="success"
-          duration={3000}
-          onClose={() => setShowToast(false)}
-        />
-      )}
+
 
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
         <div className="bg-white dark:bg-[#0f0f0f] w-full max-w-7xl rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">

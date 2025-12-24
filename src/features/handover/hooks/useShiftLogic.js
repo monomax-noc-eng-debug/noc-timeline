@@ -1,5 +1,6 @@
 // file: src/features/handover/hooks/useShiftLogic.js
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { shiftService } from '../../../services/shiftService';
 import { useStore } from '../../../store/useStore';
 
@@ -22,12 +23,14 @@ export const useShiftLogic = () => {
   const [searchText, setSearchText] = useState('');
 
   // Toast notification
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const { toast } = useToast();
 
   const showToast = useCallback((message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  }, []);
+    toast({
+      description: message,
+      variant: type,
+    });
+  }, [toast]);
 
   // Real-time Subscription
   useEffect(() => {
@@ -171,7 +174,8 @@ export const useShiftLogic = () => {
     filterStatus, setFilterStatus,
     searchText, setSearchText,
     clearFilters,
-    toast, setToast, showToast,
+    clearFilters,
+    showToast,
     handleSave,
     handleDelete,
     handleAcknowledge,

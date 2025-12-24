@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import ShiftHandoverForm from '../features/handover/ShiftHandoverForm';
 import ShiftDetailModal from '../features/handover/components/ShiftDetailModal';
 import ShiftLogItem from '../features/handover/components/ShiftLogItem';
-import Toast from '../components/ui/Toast';
+
 import ConfirmModal from '../components/ui/ConfirmModal';
 
 export default function ShiftHandoverPage() {
@@ -18,7 +18,8 @@ export default function ShiftHandoverPage() {
     filterStatus, setFilterStatus,
     clearFilters,
     handleSave, handleDelete, handleAcknowledge, handleExportCSV,
-    toast, setToast, getAckStats
+
+    getAckStats
   } = useShiftLogic();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,15 +70,6 @@ export default function ShiftHandoverPage() {
 
   return (
     <div className="h-full flex flex-col bg-zinc-50 dark:bg-black overflow-hidden relative">
-
-      {/* Toast Notification */}
-      {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
-        />
-      )}
 
       {/* Confirm Modal */}
       <ConfirmModal

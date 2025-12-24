@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { convertToGB, parseAbbrev, formatNumber, formatPercent } from '../../../utils/formatters';
@@ -27,17 +28,18 @@ export function useMatchStats(matchData, onClose) {
   const [reporterName, setReporterName] = useState('Unknown');
 
   // UI State
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [preview, setPreview] = useState({ show: false, data: [] });
 
   // --- Helper: Toast ---
+  const { toast } = useToast();
   const showToast = useCallback((message, type = 'success') => {
     if (!message) return;
-    setToast({ show: true, message, type });
-    // Auto Close Toast
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  }, []);
+    toast({
+      description: message,
+      variant: type,
+    });
+  }, [toast]);
 
   // --- 1. Fetch Data ---
   const fetchMatchData = useCallback(async () => {
@@ -287,7 +289,7 @@ export function useMatchStats(matchData, onClose) {
   };
 
   return {
-    state: { statType, loading, fetching, saving, isSuccess, form, cdnList, isMultiCdnMode, reporterName, toast, confirmModal, preview },
-    actions: { setStatType, setForm, toggleCdnMode, handleAddCdn, handleRemoveCdn, handleUpdateCdnRow, handleAutoFixTime, handleSmartSave, requestDelete, handlePreview, closeToast: () => setToast(p => ({ ...p, show: false })), closeConfirm: () => setConfirmModal(p => ({ ...p, isOpen: false })), closePreview: () => setPreview(p => ({ ...p, show: false })) }
+    state: { statType, loading, fetching, saving, isSuccess, form, cdnList, isMultiCdnMode, reporterName, confirmModal, preview },
+    actions: { setStatType, setForm, toggleCdnMode, handleAddCdn, handleRemoveCdn, handleUpdateCdnRow, handleAutoFixTime, handleSmartSave, requestDelete, handlePreview, closeConfirm: () => setConfirmModal(p => ({ ...p, isOpen: false })), closePreview: () => setPreview(p => ({ ...p, show: false })) }
   };
 }

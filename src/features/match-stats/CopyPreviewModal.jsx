@@ -3,11 +3,11 @@ import { X, Copy, Check, FileSpreadsheet } from 'lucide-react';
 
 // ✅ 1. Import Component Toast ของคุณ
 // (กรุณาเช็ค Path ให้ตรงกับที่เก็บไฟล์จริงของคุณ เช่น ../../components/ui/Toast)
-import Toast from '../../components/ui/Toast';
+import { useToast } from "@/hooks/use-toast";
 
 export default function CopyPreviewModal({ isOpen, onClose, data, headers }) {
   const [copied, setCopied] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const { toast } = useToast();
 
   if (!isOpen) return null;
 
@@ -21,9 +21,12 @@ export default function CopyPreviewModal({ isOpen, onClose, data, headers }) {
 
     navigator.clipboard.writeText(textToCopy).then(() => {
       setCopied(true);
-      setShowToast(true); // สั่งเปิด Toast
+      toast({
+        description: "Copied to clipboard successfully!",
+        variant: "success",
+      });
 
-      // Reset ปุ่ม Copy ให้กลับเป็นปกติหลังจาก 3 วิ (ส่วน Toast จะปิดตัวเองตาม duration)
+      // Reset ปุ่ม Copy ให้กลับเป็นปกติหลังจาก 3 วิ
       setTimeout(() => {
         setCopied(false);
       }, 3000);
@@ -34,14 +37,7 @@ export default function CopyPreviewModal({ isOpen, onClose, data, headers }) {
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
 
       {/* ✅ 2. เรียกใช้ Toast Component ตรงนี้ */}
-      {showToast && (
-        <Toast
-          message="Copied to clipboard successfully!"
-          type="success"
-          duration={3000}
-          onClose={() => setShowToast(false)} // เมื่อ Toast ปิดตัวเอง ให้ set state กลับ
-        />
-      )}
+
 
       {/* --- ส่วน Modal (เหมือนเดิม) --- */}
       <div className="bg-white dark:bg-[#121212] w-full max-w-5xl rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[85vh]">
@@ -114,8 +110,8 @@ export default function CopyPreviewModal({ isOpen, onClose, data, headers }) {
           <button
             onClick={handleCopy}
             className={`px-8 py-3 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transform ${copied
-                ? 'bg-emerald-500 text-white'
-                : 'bg-black dark:bg-white text-white dark:text-black'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-black dark:bg-white text-white dark:text-black'
               }`}
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}

@@ -23,6 +23,8 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+import { Toaster } from "@/components/ui/toaster";
+
 export default function App() {
   const darkMode = useStore((state) => state.darkMode);
 
@@ -36,40 +38,43 @@ export default function App() {
   }, [darkMode]);
 
   return (
-    <Routes>
-      {/* 1. Route สำหรับหน้า Login (ไม่มีแถบ Sidebar) */}
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Routes>
+        {/* 1. Route สำหรับหน้า Login (ไม่มีแถบ Sidebar) */}
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* 2. Route หลักที่ต้องผ่านการ Login (มี Sidebar ผ่าน MainLayout) */}
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <Routes>
-                {/* หน้า Dashboard หลัก */}
-                <Route path="/" element={<WelcomePage />} />
+        {/* 2. Route หลักที่ต้องผ่านการ Login (มี Sidebar ผ่าน MainLayout) */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Routes>
+                  {/* หน้า Dashboard หลัก */}
+                  <Route path="/" element={<WelcomePage />} />
 
-                {/* ระบบ Schedule */}
-                <Route path="/schedule/today" element={<TodayPage />} />
-                <Route path="/schedule/history" element={<HistoryPage />} />
+                  {/* ระบบ Schedule */}
+                  <Route path="/schedule/today" element={<TodayPage />} />
+                  <Route path="/schedule/history" element={<HistoryPage />} />
 
-                {/* ระบบจัดการ Ticket (หน้าใหม่ที่เพิ่มเข้ามา) */}
-                <Route path="/tickets" element={<TicketLogPage />} />
+                  {/* ระบบจัดการ Ticket (หน้าใหม่ที่เพิ่มเข้ามา) */}
+                  <Route path="/tickets" element={<TicketLogPage />} />
 
-                {/* ระบบ Timeline และ Incident */}
-                <Route path="/incidents" element={<TimelinePage />} />
+                  {/* ระบบ Timeline และ Incident */}
+                  <Route path="/incidents" element={<TimelinePage />} />
 
-                {/* ระบบส่งเวร (Handover) */}
-                <Route path="/handover" element={<ShiftHandoverPage />} />
+                  {/* ระบบส่งเวร (Handover) */}
+                  <Route path="/handover" element={<ShiftHandoverPage />} />
 
-                {/* กรณีพิมพ์ URL มั่ว ให้ดีดกลับหน้าหลัก */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+                  {/* กรณีพิมพ์ URL มั่ว ให้ดีดกลับหน้าหลัก */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      <Toaster />
+    </>
   );
 }

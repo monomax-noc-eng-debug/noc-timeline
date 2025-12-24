@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, Loader2, Server, Wifi, Users, Gauge, Clock, Layers, ArrowRight, Check, Eye, Trash2 } from 'lucide-react';
 import ConfigSection from './components/ConfigSection';
 import CopyPreviewModal from './CopyPreviewModal';
-import Toast from '../../components/ui/Toast';
+
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { useMatchStats } from './hooks/useMatchStats';
 import { SystemPanel, TrafficPanel, ViewerPanel } from './components/StatPanels';
@@ -48,15 +48,7 @@ export default function MatchStatModal({ isOpen, onClose, matchData }) {
       </div>
 
       {/* 2. Toast (Z-Index สูงสุด) */}
-      {state.toast.show && (
-        <div className="fixed bottom-4 right-4 z-[300]">
-          <Toast
-            message={state.toast.message}
-            type={state.toast.type}
-            onClose={actions.closeToast}
-          />
-        </div>
-      )}
+
 
       {/* 3. Preview Modal */}
       <CopyPreviewModal

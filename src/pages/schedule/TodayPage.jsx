@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 // Hooks & Services
 import { useMatches } from '../../features/matches/hooks/useMatches';
 import { matchService } from '../../services/matchService';
@@ -7,13 +7,16 @@ import MatchCard from '../../features/matches/components/MatchCard';
 import MatchStatModal from '../../features/match-stats/MatchStatModal';
 import ManualMatchModal from '../../features/matches/components/ManualMatchModal';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import Toast from '../../components/ui/Toast';
+import { useToast } from "@/hooks/use-toast";
 import DataPreviewPanel from '../../features/matches/components/DataPreviewPanel';
 // Icons & Utils
 import {
   Search, Radio, Bell, BellOff, ChevronLeft, ChevronRight,
-  Plus, Calendar, FileText, Filter as FilterIcon, TrendingUp
+  Plus, Calendar as CalendarIcon, FileText, Filter as FilterIcon, TrendingUp
 } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { format, addDays, subDays, isToday } from 'date-fns';
 
 // Internal Component: Live Clock
@@ -43,7 +46,8 @@ export default function TodayPage() {
   const [editingMatch, setEditingMatch] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
-  const [toasts, setToasts] = useState([]); // Array of toasts
+  /* Removed custom toast state */
+  const { toast } = useToast();
   const [isDataPreviewOpen, setIsDataPreviewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -56,17 +60,12 @@ export default function TodayPage() {
   const [notifiedStatusChanges, setNotifiedStatusChanges] = useState(new Set());
   const previousMatchStates = useRef(new Map());
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
-  };
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  const showToast = useCallback((message, type = 'success') => {
+    toast({
+      description: message,
+      variant: type,
+    });
+  }, [toast]);
 
   // Date Handlers
   const handlePrevDay = () => setSelectedDate(prev => subDays(prev, 1));
@@ -252,21 +251,7 @@ export default function TodayPage() {
 
 
       {/* Toast Stack */}
-      <div className="fixed bottom-4 right-4 z-[200] flex flex-col-reverse gap-2">
-        {toasts.map((toast, index) => (
-          <div
-            key={toast.id}
-            className="animate-in slide-in-from-right-5 fade-in duration-300"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => removeToast(toast.id)}
-            />
-          </div>
-        ))}
-      </div>
+
 
 
       <DataPreviewPanel
@@ -306,18 +291,28 @@ export default function TodayPage() {
                 </button>
 
                 <div className="relative mx-2 flex-1 flex justify-center">
-                  <div className="h-12 w-full flex items-center justify-center px-2 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors border border-zinc-700/50 group overflow-hidden">
-                    <Calendar size={18} className="text-zinc-400 mr-2 md:mr-3 group-hover:text-red-500 transition-colors shrink-0" />
-                    <span className="text-sm md:text-lg font-bold text-white tracking-wide whitespace-nowrap truncate">
-                      {format(selectedDate, 'EEEE, dd MMM yyyy')}
-                    </span>
-                  </div>
-                  <input
-                    type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    value={dateStr}
-                    onChange={handleDateChange}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="h-12 w-full flex items-center justify-center px-2 bg-zinc-800/50 rounded-xl hover:bg-zinc-800 transition-colors border border-zinc-700/50 group overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500">
+                        <CalendarIcon size={18} className="text-zinc-400 mr-2 md:mr-3 group-hover:text-red-500 transition-colors shrink-0" />
+                        <span className="text-sm md:text-lg font-bold text-white tracking-wide whitespace-nowrap truncate">
+                          {format(selectedDate, 'EEEE, dd MMM yyyy')}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" align="center">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                        classNames={{
+                          selected: "bg-red-600! text-white!",
+                          today: "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100",
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <button
@@ -332,18 +327,28 @@ export default function TodayPage() {
               <div className="flex bg-zinc-800 rounded-2xl border border-zinc-700 p-1.5 h-14 lg:h-[62px] items-center w-full lg:w-auto">
                 {/* Picker Part */}
                 <div className="relative h-full aspect-square shrink-0">
-                  <button
-                    className="w-full h-full flex items-center justify-center rounded-xl bg-zinc-700 text-zinc-300 hover:bg-zinc-600 hover:text-white transition-all"
-                    title="Select Date"
-                  >
-                    <Calendar size={22} />
-                  </button>
-                  <input
-                    type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    value={dateStr}
-                    onChange={handleDateChange}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="w-full h-full flex items-center justify-center rounded-xl bg-zinc-700 text-zinc-300 hover:bg-zinc-600 hover:text-white transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500"
+                        title="Select Date"
+                      >
+                        <CalendarIcon size={22} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                        classNames={{
+                          selected: "bg-red-600! text-white!",
+                          today: "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100",
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Separator */}

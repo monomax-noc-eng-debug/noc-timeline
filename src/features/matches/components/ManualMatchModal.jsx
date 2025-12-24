@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  X, Save, Loader2, Calendar, Clock, Trophy, Tv,
-  LayoutList, Server, Wand2, Swords, Sparkles, CheckCircle2
+  X, Save, Loader2, Clock, Trophy, Tv,
+  LayoutList, Server, Wand2, Swords, Sparkles, CheckCircle2,
+  Calendar as CalendarIcon
 } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format, parseISO } from 'date-fns'
 
 export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialData, selectedDate, saving }) {
   const [form, setForm] = useState({
@@ -263,13 +268,41 @@ export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialDat
                       <Calendar size={14} />
                       Date
                     </label>
-                    <input
-                      type="date"
-                      className="w-full h-12 bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl px-3 text-sm font-semibold text-zinc-900 dark:text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
-                      value={form.startDate}
-                      onChange={e => setForm({ ...form, startDate: e.target.value })}
-                      required
-                    />
+                    <div className="relative">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "w-full h-12 bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl px-4 text-sm font-semibold text-zinc-900 dark:text-white flex items-center justify-between outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all",
+                              !form.startDate && "text-zinc-400"
+                            )}
+                          >
+                            {form.startDate ? format(parseISO(form.startDate), "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon size={16} className="text-zinc-400" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={form.startDate ? parseISO(form.startDate) : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                // Keep it in YYYY-MM-DD format for form state
+                                const yyyy = date.getFullYear();
+                                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                const dd = String(date.getDate()).padStart(2, '0');
+                                setForm({ ...form, startDate: `${yyyy}-${mm}-${dd}` });
+                              }
+                            }}
+                            initialFocus
+                            classNames={{
+                              selected: "bg-blue-600! text-white!",
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-3">

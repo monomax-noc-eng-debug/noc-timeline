@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Clock, FileText, AlertTriangle, CheckCircle2, Sun, Moon, Loader2 } from 'lucide-react';
+import { X, Save, Clock, FileText, AlertTriangle, CheckCircle2, Sun, Moon, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format, parseISO } from 'date-fns'
 
 /**
  * ShiftHandoverForm - Modal form for creating/editing shift handover logs
@@ -144,12 +148,40 @@ export default function ShiftHandoverForm({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Date</label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className={`${inputClass} px-2 text-center tracking-tight ${errors.date ? 'border-red-400' : ''}`}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      inputClass,
+                      "px-4 text-left flex items-center justify-between",
+                      !formData.date && "text-zinc-400",
+                      errors.date ? 'border-red-400' : ''
+                    )}
+                  >
+                    {formData.date ? format(parseISO(formData.date), "PPP") : <span>Pick a date</span>}
+                    <CalendarIcon size={14} className="text-zinc-400" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date ? parseISO(formData.date) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, '0');
+                        const dd = String(date.getDate()).padStart(2, '0');
+                        setFormData({ ...formData, date: `${yyyy}-${mm}-${dd}` });
+                      }
+                    }}
+                    initialFocus
+                    classNames={{
+                      selected: "bg-black! text-white! dark:bg-white! dark:text-black!",
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
               {errors.date && <p className={errorClass}>{errors.date}</p>}
             </div>
 
