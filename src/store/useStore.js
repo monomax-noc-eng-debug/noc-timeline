@@ -4,6 +4,10 @@ import { persist } from 'zustand/middleware';
 export const useStore = create(
   persist(
     (set) => ({
+      // ------------------------------------------------------------------
+      // 1. User & Team Config
+      // ------------------------------------------------------------------
+
       // รายชื่อทีม NOC (Mock Data)
       nocMembers: [
         { id: 'NOC-1', name: 'Mekin S.', role: 'NOC Lead' },
@@ -14,13 +18,17 @@ export const useStore = create(
       ],
 
       // ผู้ใช้ปัจจุบัน
-      currentUser: 'Mekin S.', // Default
+      currentUser: 'Mekin S.', // Default value (ควรเปลี่ยนเป็น null ใน Production)
       setCurrentUser: (name) => set({ currentUser: name }),
 
-      // ✅ เพิ่ม Action สำหรับ Logout
+      // Action สำหรับ Logout
       logout: () => set({ currentUser: null }),
 
-      // Theme
+      // ------------------------------------------------------------------
+      // 2. UI & Theme
+      // ------------------------------------------------------------------
+
+      // Theme State
       darkMode: false,
       toggleDarkMode: () => set((state) => {
         const newVal = !state.darkMode;
@@ -29,9 +37,14 @@ export const useStore = create(
         else document.documentElement.classList.remove('dark');
         return { darkMode: newVal };
       }),
+
+      // ------------------------------------------------------------------
+      // หมายเหตุ: ส่วน Data Caching ถูกลบออกแล้ว 
+      // เพื่อให้ React Query จัดการแทนตามวิธีที่ 2
+      // ------------------------------------------------------------------
     }),
     {
-      name: 'noc-storage',
+      name: 'noc-storage', // ชื่อ Key ที่ใช้เก็บใน LocalStorage
     }
   )
 );

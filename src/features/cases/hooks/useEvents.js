@@ -37,12 +37,13 @@ export const useEvents = (incidentId) => {
 
   // Get sorted events
   const sortedEvents = [...events].sort((a, b) => {
-    if (typeof a.order === 'number' && typeof b.order === 'number' && a.order !== b.order) {
-      return a.order - b.order;
-    }
     const dateA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`).getTime();
     const dateB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`).getTime();
-    return dateA - dateB;
+
+    if (dateA !== dateB) return dateB - dateA; // Latest First
+
+    // If same time, use order as fallback (descending)
+    return (b.order || 0) - (a.order || 0);
   });
 
   // Get timeline stats

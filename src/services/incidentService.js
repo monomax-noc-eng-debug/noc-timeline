@@ -17,7 +17,7 @@ export const incidentService = {
   subscribeIncidents: (callback, limitCount = 100) => {
     const q = query(
       collection(db, INCIDENTS_COL),
-      orderBy("createdAt", "desc"),
+      orderBy("updatedAt", "desc"),
       limit(limitCount)
     );
     return onSnapshot(q, (snapshot) => {
@@ -27,7 +27,7 @@ export const incidentService = {
         // ✅ Ensure defaults for optional fields
         status: doc.data().status || 'Open',
         type: doc.data().type || 'Incident',
-        project: doc.data().project || 'General'
+        project: doc.data().project || 'MONOMAX'
       }));
       callback(data);
     }, (error) => {
@@ -46,8 +46,8 @@ export const incidentService = {
     const q = query(
       collection(db, INCIDENTS_COL, incidentId, EVENTS_COL),
       orderBy("order", "asc"),
-      orderBy("date", "asc"),
-      orderBy("time", "asc")
+      orderBy("date", "desc"),
+      orderBy("time", "desc")
     );
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -75,7 +75,7 @@ export const incidentService = {
         status: data.status || 'Open',
         type: data.type || 'Incident',
         priority: data.priority || 'Medium', // 🔥 Added Priority
-        project: data.project || 'General',
+        project: data.project || 'MONOMAX',
         eventCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -133,7 +133,7 @@ export const incidentService = {
     try {
       const eventRef = await addDoc(collection(db, INCIDENTS_COL, incidentId, EVENTS_COL), {
         ...data,
-        order: data.order || 0,
+        order: data.order ?? -Date.now(), // Newest at top by default (smallest number)
         imageUrls: data.imageUrls || [],
         createdAt: new Date().toISOString()
       });

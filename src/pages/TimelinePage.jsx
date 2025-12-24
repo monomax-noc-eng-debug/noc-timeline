@@ -54,7 +54,7 @@ export default function TimelinePage() {
     try {
       const newDoc = await incidentService.createIncident({
         subject: 'New Incident',
-        project: 'General',
+        project: 'MONOMAX',
         status: 'Open',
         type: 'Incident',
         ticket: '',
@@ -230,6 +230,7 @@ export default function TimelinePage() {
           onAddEvent={handleAddEvent}
           onUpdateEvent={handleUpdateEvent}
           onDeleteEvent={handleDeleteEvent}
+          onDeleteIncident={handleDeleteIncident}
           onReorderEvent={handleReorderEvent}
           saving={saving}
         />

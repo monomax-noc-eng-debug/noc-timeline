@@ -1,3 +1,4 @@
+// src/features/match-stats/hooks/useMatchStats.js
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,11 +17,11 @@ const INITIAL_FORM_STATE = {
 
 export function useMatchStats(matchData, onClose) {
   // --- State ---
-  const [statType, setStatType] = useState('START');
+  const [statType, setStatType] = useState('START'); // ใช้ตัวนี้เช็ค Phase
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // ✅ เพิ่ม isSuccess state
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const [form, setForm] = useState(INITIAL_FORM_STATE);
   const [cdnList, setCdnList] = useState([]);
@@ -31,14 +32,10 @@ export function useMatchStats(matchData, onClose) {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [preview, setPreview] = useState({ show: false, data: [] });
 
-  // --- Helper: Toast ---
   const { toast } = useToast();
   const showToast = useCallback((message, type = 'success') => {
     if (!message) return;
-    toast({
-      description: message,
-      variant: type,
-    });
+    toast({ description: message, variant: type });
   }, [toast]);
 
   // --- 1. Fetch Data ---
@@ -57,7 +54,7 @@ export function useMatchStats(matchData, onClose) {
         const data = statSnap.data();
         setForm(prev => ({
           ...prev, ...data,
-          liveChannel: data.liveChannel || baseInfo.liveChannel || baseInfo.channel || matchData.channel || '', // Prioritize saved stat, then match info
+          liveChannel: data.liveChannel || baseInfo.liveChannel || baseInfo.channel || matchData.channel || '',
           reqTotal: data.reqTotal || { val: '', unit: 'k' },
           bwPeakGbps: data.bwPeakGbps || { val: '', unit: 'GB' },
           bandwidth: data.bandwidth || { val: '', unit: 'GB' }
@@ -72,18 +69,14 @@ export function useMatchStats(matchData, onClose) {
         }
         setReporterName(data.reporter || 'Unknown');
       } else {
-        // First time load: Pull defaults from Match Info
         const defaultCdn = baseInfo.cdn || 'AWS';
         const isMulti = defaultCdn === 'Multi CDN';
-
         setForm({
           ...INITIAL_FORM_STATE,
-          liveChannel: baseInfo.liveChannel || baseInfo.channel || matchData.channel || '', // Only use if match info specifically has liveChannel ID
+          liveChannel: baseInfo.liveChannel || baseInfo.channel || matchData.channel || '',
           cdn: defaultCdn
         });
-
         setIsMultiCdnMode(isMulti);
-
         if (isMulti) {
           setCdnList([{
             id: Date.now(), provider: 'Select Provider', key: '',
@@ -104,11 +97,9 @@ export function useMatchStats(matchData, onClose) {
     }
   }, [matchData, statType, showToast]);
 
-  useEffect(() => {
-    fetchMatchData();
-  }, [fetchMatchData]);
+  useEffect(() => { fetchMatchData(); }, [fetchMatchData]);
 
-  // --- 2. Logic Handlers ---
+  // --- Logic Handlers ---
   const toggleCdnMode = () => {
     setIsMultiCdnMode(prev => !prev);
     if (!isMultiCdnMode && cdnList.length === 0) {
@@ -121,24 +112,16 @@ export function useMatchStats(matchData, onClose) {
     setForm(prev => ({ ...prev, cdn: !isMultiCdnMode ? 'Multi CDN' : 'AWS' }));
   };
 
-  const handleAddCdn = () => {
-    setCdnList(prev => [...prev, {
-      id: Date.now(), provider: 'Select Provider', key: '',
-      reqPeakMin: '', reqTotal: { val: '', unit: 'k' },
-      bwPeakGbps: { val: '', unit: 'GB' }, bandwidth: { val: '', unit: 'GB' },
-      ecsSport: '', ecsEntitlement: '', apiHuawei: '', requestPeak: '', muxViewerUniq: '', muxScore: ''
-    }]);
-  };
+  const handleAddCdn = () => setCdnList(prev => [...prev, {
+    id: Date.now(), provider: 'Select Provider', key: '', reqPeakMin: '', reqTotal: { val: '', unit: 'k' },
+    bwPeakGbps: { val: '', unit: 'GB' }, bandwidth: { val: '', unit: 'GB' },
+    ecsSport: '', ecsEntitlement: '', apiHuawei: '', requestPeak: '', muxViewerUniq: '', muxScore: ''
+  }]);
 
-  const handleRemoveCdn = (id) => {
-    if (cdnList.length > 1) setCdnList(prev => prev.filter(item => item.id !== id));
-  };
+  const handleRemoveCdn = (id) => cdnList.length > 1 && setCdnList(prev => prev.filter(item => item.id !== id));
+  const handleUpdateCdnRow = (id, field, value) => setCdnList(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
 
-  const handleUpdateCdnRow = (id, field, value) => {
-    setCdnList(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  // --- 3. Auto Fix Time ---
+  // --- ✅ 3. Auto Fix Time (Corrected Logic) ---
   const handleAutoFixTime = () => {
     let rawTime = matchData?.startTime || matchData?.start_time || matchData?.time;
     if (!rawTime) { showToast("ไม่พบข้อมูลเวลาแข่ง", "error"); return; }
@@ -148,10 +131,8 @@ export function useMatchStats(matchData, onClose) {
         let lowerStr = String(str).toLowerCase().trim().replace('.', ':');
         let cleanStr = lowerStr.replace(/[a-z]/g, '').trim();
         let [hStr, mStr] = cleanStr.split(':');
-
         let h = parseInt(hStr, 10);
         let m = parseInt(mStr || '0', 10);
-
         if (isNaN(h)) return null;
         if (lowerStr.includes('pm') && h < 12) h += 12;
         return { h, m };
@@ -160,24 +141,35 @@ export function useMatchStats(matchData, onClose) {
       const timeObj = parseTime(rawTime);
       if (!timeObj) { showToast("รูปแบบเวลาไม่ถูกต้อง", "error"); return; }
 
-      const addTime = (baseH, baseM, mins) => {
-        let total = baseH * 60 + baseM + mins;
-        total = ((total % 1440) + 1440) % 1440;
-        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+      const addTime = (baseH, baseM, minsToAdd) => {
+        let totalMinutes = baseH * 60 + baseM + minsToAdd;
+        totalMinutes = ((totalMinutes % 1440) + 1440) % 1440; // รองรับข้ามวัน
+        let newH = Math.floor(totalMinutes / 60);
+        let newM = totalMinutes % 60;
+        return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
       };
 
-      const newStart = addTime(timeObj.h, timeObj.m, 15);
-      const newEnd = addTime(timeObj.h, timeObj.m, 120);
+      let newStart, newEnd;
+
+      if (statType === 'START') {
+        // ✅ Phase 1: Start = เวลาเตะ, End = เวลาเตะ + 15 นาที
+        newStart = addTime(timeObj.h, timeObj.m, 0);
+        newEnd = addTime(timeObj.h, timeObj.m, 15);
+      } else {
+        // ✅ Phase 2: Start = เวลาเตะ, End = เวลาเตะ + 2 ชั่วโมง
+        newStart = addTime(timeObj.h, timeObj.m, 0);
+        newEnd = addTime(timeObj.h, timeObj.m, 120);
+      }
 
       setForm(prev => ({ ...prev, rangeStart: newStart, rangeEnd: newEnd }));
-      showToast(`คำนวณเวลาสำเร็จ: ${newStart} - ${newEnd}`, "success");
+      showToast(`คำนวณเวลา (${statType}): ${newStart} - ${newEnd}`, "success");
 
     } catch (err) {
       showToast("เกิดข้อผิดพลาดในการคำนวณ", "error");
     }
   };
 
-  // --- 4. Save Logic ---
+  // --- Smart Save ---
   const handleSmartSave = async (onSuccess) => {
     if (!matchData?.id) return;
     setSaving(true);
@@ -215,12 +207,12 @@ export function useMatchStats(matchData, onClose) {
     }
   };
 
-  // --- 5. Delete Logic ---
+  // --- Delete Logic ---
   const requestDelete = () => {
     setConfirmModal({
       isOpen: true,
       title: `Reset ${statType} Stats?`,
-      message: `Are you sure you want to delete ${statType} data? Match status will be reverted.`,
+      message: `Are you sure you want to delete ${statType} data?`,
       isDanger: true,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -233,7 +225,7 @@ export function useMatchStats(matchData, onClose) {
             [statType === 'START' ? 'startStats' : 'endStats']: null,
             updatedAt: serverTimestamp()
           });
-          showToast("ลบข้อมูลและรีเซ็ตสถานะเรียบร้อย", "success");
+          showToast("รีเซ็ตเรียบร้อย", "success");
           setTimeout(onClose, 1000);
         } catch (e) {
           showToast("ลบข้อมูลไม่สำเร็จ", "error");
@@ -244,12 +236,10 @@ export function useMatchStats(matchData, onClose) {
     });
   };
 
-  // --- 6. Preview Logic ---
+  // --- Preview Logic ---
   const handlePreview = () => {
-    // Helper to ensure correct parsing for reqTotal
     const parseReq = (req) => {
       if (!req) return 0;
-      // Handle object { val, unit }
       if (typeof req === 'object' && req.val !== undefined) {
         const v = parseFloat(req.val || 0);
         const u = (req.unit || 'k').toLowerCase();
@@ -257,7 +247,6 @@ export function useMatchStats(matchData, onClose) {
         if (u === 'b') return v * 1000000000;
         return v * 1000;
       }
-      // Handle string fallback
       return parseAbbrev(req);
     };
 

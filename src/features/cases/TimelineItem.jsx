@@ -10,142 +10,117 @@ export default function TimelineItem({
   onMove, onEdit, onDelete
 }) {
   // Handle multiple image formats
-  let displayImages = event.imageUrls || [];
-  if (!displayImages.length && event.image) displayImages = [event.image];
-  if (!displayImages.length && event.imageUrl) displayImages = [event.imageUrl];
+  let displayImages = (event.imageUrls || []).filter(u => u && typeof u === 'string');
+  if (!displayImages.length && event.image && typeof event.image === 'string') displayImages = [event.image];
+  if (!displayImages.length && event.imageUrl && typeof event.imageUrl === 'string') displayImages = [event.imageUrl];
 
   const hasDescription = event.desc && event.desc.trim().length > 0;
   const hasImages = displayImages.length > 0;
 
   return (
-    <div className="relative flex items-start gap-3 md:gap-4 mb-6 z-10 group/item animate-in fade-in slide-in-from-left-2 duration-300">
+    <div className="relative flex items-start gap-3 md:gap-4 mb-4 z-10 group/item animate-in fade-in slide-in-from-left-2 duration-300">
 
       {/* --- Left Column: Time & Dot --- */}
-      <div className="flex-none flex flex-col items-center w-16 pt-[6px]">
-        {/* Dot with pulse effect for first item */}
+      <div className="flex-none flex flex-col items-center w-14 pt-[4px]">
+        {/* Dot with pulse effect (Compact) */}
         <div className={`
-          w-3 h-3 rounded-full bg-white dark:bg-zinc-900 border-[3px] border-black dark:border-white shadow-sm z-20 transition-all
-          ${index === 0 ? 'ring-4 ring-black/10 dark:ring-white/10' : ''}
+          w-2.5 h-2.5 rounded-full bg-white dark:bg-zinc-900 border-[2.5px] border-black dark:border-white shadow-sm z-20 transition-all
+          ${index === 0 ? 'ring-2 ring-black/10 dark:ring-white/10' : ''}
           group-hover/item:scale-125
         `} />
 
-        {/* Time */}
-        <div className="mt-1.5">
-          <span className="font-mono text-[10px] font-bold text-gray-500 dark:text-zinc-500 bg-gray-100 dark:bg-zinc-900 px-1.5 py-0.5 rounded">
+        {/* Time (Compact) */}
+        <div className="mt-1">
+          <span className="font-mono text-[9px] font-black text-gray-400 dark:text-zinc-500 bg-gray-50/50 dark:bg-zinc-900 px-1 py-0.5 rounded uppercase">
             {event.time}
           </span>
         </div>
 
-        {/* Image indicator */}
+        {/* Image indicator (Compact) */}
         {hasImages && (
-          <div className="mt-1 text-zinc-400">
-            <ImageIcon size={10} />
+          <div className="mt-1 text-zinc-300">
+            <ImageIcon size={9} />
           </div>
         )}
       </div>
 
       {/* --- Right Column: Content Card --- */}
       <div className="flex-1 min-w-0">
-        {/* Date Header */}
+        {/* Date Header (Compact Style) */}
         {showDateHeader && (
-          <div className="mb-3 -mt-2">
-            <span className="inline-block text-[9px] font-black text-white dark:text-black uppercase tracking-widest bg-gradient-to-r from-black to-zinc-700 dark:from-white dark:to-zinc-300 px-3 py-1 rounded-full shadow-sm">
+          <div className="mb-2 -mt-1">
+            <span className="inline-block text-[8px] font-black text-white dark:text-black uppercase tracking-wider bg-zinc-900 dark:bg-zinc-100 px-2 py-0.5 rounded shadow-sm">
               {dateLabel}
             </span>
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#111] p-3 md:p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm flex gap-3 relative hover:border-black dark:hover:border-white transition-all group-hover/item:shadow-md">
+        <div className="bg-white dark:bg-[#0a0a0a] p-2.5 md:p-3 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex gap-2 relative hover:border-zinc-300 dark:hover:border-zinc-600 transition-all group-hover/item:shadow-md">
 
-          {/* Reorder Buttons */}
-          <div className="flex flex-col gap-1 justify-center border-r pr-2 border-gray-100 dark:border-zinc-800 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity">
+          {/* Reorder Buttons (Micro) */}
+          <div className="flex flex-col gap-0.5 justify-center border-r pr-1.5 border-gray-100 dark:border-zinc-900 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity">
             <button
               onClick={() => onMove(index, 'up')}
               disabled={index === 0}
-              className="p-1 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-20 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
-              title="Move up"
+              className="p-0.5 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-10 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
             >
-              <ChevronUp size={14} />
+              <ChevronUp size={12} />
             </button>
             <button
               onClick={() => onMove(index, 'down')}
               disabled={isLastItem}
-              className="p-1 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-20 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
-              title="Move down"
+              className="p-0.5 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-10 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
             >
-              <ChevronDown size={14} />
+              <ChevronDown size={12} />
             </button>
           </div>
 
-          <div className="flex-1 min-w-0 relative pr-12 md:pr-14">
+          <div className="flex-1 min-w-0 relative pr-10 md:pr-12">
 
-            {/* Actions (Absolute Top Right) */}
-            <div className="absolute top-0 right-0 flex gap-1 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity bg-white dark:bg-[#111] pl-2 pb-2 rounded-bl-xl">
+            {/* Actions (Absolute Top Right - Tiny) */}
+            <div className="absolute top-0 right-0 flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity">
               <button
                 onClick={() => onEdit(event)}
-                className="p-1.5 text-gray-400 hover:text-blue-500 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                title="Edit event"
+                className="p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded transition-colors"
               >
-                <Pencil size={12} />
+                <Pencil size={10} />
               </button>
               <button
                 onClick={() => onDelete(event.id)}
-                className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="Delete event"
+                className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded transition-colors"
               >
-                <Trash2 size={12} />
+                <Trash2 size={10} />
               </button>
             </div>
 
-            {/* Description */}
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap pt-0.5">
-              {hasDescription ? (
-                event.desc
-              ) : (
-                <span className="text-gray-400 dark:text-zinc-600 italic font-normal">
-                  No details provided.
-                </span>
-              )}
+            {/* Description (Compact) */}
+            <div className="text-[11px] font-medium text-gray-700 dark:text-zinc-400 leading-normal whitespace-pre-wrap pt-0.5">
+              {hasDescription ? event.desc : <span className="text-gray-300 dark:text-zinc-800 italic">...</span>}
             </div>
 
-            {/* Image Grid */}
+            {/* Image Grid (Smaller) */}
             {hasImages && (
-              <div className={`grid gap-2 mt-3 ${displayImages.length === 1
-                  ? 'grid-cols-1 max-w-[200px]'
-                  : displayImages.length === 2
-                    ? 'grid-cols-2 max-w-[400px]'
-                    : 'grid-cols-2 sm:grid-cols-3'
+              <div className={`grid gap-1.5 mt-2.5 ${displayImages.length === 1
+                ? 'grid-cols-1 max-w-[150px]'
+                : displayImages.length === 2
+                  ? 'grid-cols-2 max-w-[300px]'
+                  : 'grid-cols-2 sm:grid-cols-3'
                 }`}>
                 {displayImages.map((url, imgIndex) => (
-                  <div
-                    key={imgIndex}
-                    className="relative group/image rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 aspect-video"
-                  >
+                  <div key={imgIndex} className="relative group/image rounded-lg overflow-hidden border border-gray-100 dark:border-zinc-900 bg-gray-50 aspect-video">
                     <img
                       src={getDirectImageUrl(url)}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-110"
                       alt={`Evidence ${imgIndex + 1}`}
                       loading="lazy"
                       onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://placehold.co/300x200/222/fff?text=Image+Error';
+                        console.warn("Image load failed:", url);
+                        e.target.src = 'https://placehold.co/400?text=Image+Load+Failed';
                       }}
                     />
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 hover:opacity-100"
-                    >
-                      <ExternalLink size={16} className="text-white drop-shadow-lg" />
+                    <a href={url} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
+                      <ExternalLink size={14} className="text-white" />
                     </a>
-
-                    {/* Image counter for multiple images */}
-                    {displayImages.length > 1 && (
-                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
-                        {imgIndex + 1}/{displayImages.length}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

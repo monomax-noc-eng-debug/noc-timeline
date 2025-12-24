@@ -1,290 +1,307 @@
 import React, { useState } from 'react';
-import { CloudDownload, Calendar, Loader2, AlertCircle, Save, CalendarRange, MousePointer2, CheckCircle2, X, RefreshCw } from 'lucide-react';
-import { writeBatch, doc } from 'firebase/firestore';
+import {
+  CloudDownload, Calendar, Loader2, AlertCircle, Save,
+  CalendarRange, MousePointer2, CheckCircle2, X, RefreshCw,
+  ArrowRight, FileDiff, Database
+} from 'lucide-react';
+import { writeBatch, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 
 const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
 export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
-  // Mode: 'daily' หรือ 'monthly'
   const [syncMode, setSyncMode] = useState('daily');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  const [loading, setLoading] = useState(false);
-  const [matches, setMatches] = useState([]);
+  // States
+  const [step, setStep] = useState('input'); // input -> analyzing -> review -> saving -> success
+  const [analysis, setAnalysis] = useState({ newItems: [], updatedItems: [], uptodateItems: [] });
   const [error, setError] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [success, setSuccess] = useState(null);
 
-  const fetchFromGAS = async () => {
-    setLoading(true);
+  // Reset
+  const resetState = () => {
+    setStep('input');
+    setAnalysis({ newItems: [], updatedItems: [], uptodateItems: [] });
     setError(null);
-    setMatches([]);
+  };
 
+  // 1. Fetch & Analyze
+  const handleAnalyze = async () => {
+    setStep('analyzing');
+    setError(null);
     const paramDate = syncMode === 'daily' ? date : month;
 
     try {
-      if (!GOOGLE_SCRIPT_URL) throw new Error("❌ API URL not found in environment variables.");
+      if (!GOOGLE_SCRIPT_URL) throw new Error("API URL not configured.");
 
-      console.log(`fetching mode: ${syncMode}, param: ${paramDate}`);
+      // A. Fetch from Google Sheet
       const response = await fetch(`${GOOGLE_SCRIPT_URL}?date=${paramDate}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+      if (!response.ok) throw new Error("Failed to fetch from Google Script");
       const result = await response.json();
 
-      if (Array.isArray(result) && result.length > 0 && result[0].error) {
-        setError(result[0].error);
-        return;
-      }
+      const rawData = Array.isArray(result) ? result : (result.data || []);
+      if (rawData.length === 0) throw new Error("No data found in Sheet.");
+      if (rawData[0]?.error) throw new Error(rawData[0].error);
 
-      const data = Array.isArray(result) ? result : (result.data || []);
-      if (data.length === 0) {
-        setError("No matches found for the selected period.");
-        return;
-      }
-
-      const mappedData = data.map((item) => {
-        // ใช้ชื่อแมตช์เต็มๆ
-        const fullMatchName = item.match || item.title || item.Match || item.Title || '';
-
-        // แยกทีม (ถ้ามี vs)
+      // Map Data
+      const incomingMatches = rawData.map((item) => {
+        const fullMatchName = item.match || item.title || item.Match || '';
         let teamA = fullMatchName;
         let teamB = '';
         if (fullMatchName.includes(' vs ')) {
-          const parts = fullMatchName.split(' vs ');
-          teamA = parts[0].trim();
-          teamB = parts[1] ? parts[1].trim() : '';
+          const p = fullMatchName.split(' vs ');
+          teamA = p[0].trim(); teamB = p[1]?.trim() || '';
         }
 
         return {
-          id: item.id,
-          time: item.time || item.startTime || item.Time || '',
-          league: item.league || item.calendar || item.League || '',
+          id: item.id?.toString(),
+          time: item.time || item.startTime || '',
+          league: item.league || item.calendar || '',
           match: fullMatchName,
-          teamA,
-          teamB,
+          teamA, teamB,
           channel: item.channel || item.Channel || '',
-          // ✅ ใช้ startDate จากข้อมูลที่ได้มา (เพราะถ้าดึงทั้งเดือน วันที่จะไม่เหมือนกัน)
           startDate: item.startDate || (syncMode === 'daily' ? date : ''),
-          status: 'Scheduled'
         };
-      });
+      }).filter(m => m.id); // ต้องมี ID
 
-      // ✅ กรองข้อมูลซ้ำ
-      const uniqueMatches = mappedData.filter((item, index, self) =>
-        index === self.findIndex((t) => (
-          t.startDate === item.startDate &&
-          t.time === item.time &&
-          t.match === item.match
-        ))
-      );
+      // B. Compare with Firestore (Batch Check)
+      const newItems = [];
+      const updatedItems = [];
+      const uptodateItems = [];
 
-      // เรียงลำดับตามวันที่และเวลา
-      uniqueMatches.sort((a, b) =>
-        new Date(`${a.startDate}T${a.time}`) - new Date(`${b.startDate}T${b.time}`)
-      );
+      // ใช้ Promise.all เพื่อเช็ค DB ทีละรายการ (หรือถ้าข้อมูลเยอะควร query เป็น chunk)
+      // ในที่นี้สมมติว่า sync ทีละวัน/เดือน ข้อมูลไม่เกิน 100 รายการ เช็คตรงๆ ได้
+      await Promise.all(incomingMatches.map(async (incoming) => {
+        const docRef = doc(db, 'schedules', incoming.id);
+        const docSnap = await getDoc(docRef);
 
-      setMatches(uniqueMatches);
+        if (!docSnap.exists()) {
+          newItems.push(incoming);
+        } else {
+          const existing = docSnap.data();
+          // Check Diff (เทียบเฉพาะ field ที่สำคัญ)
+          const hasChanges = (
+            existing.startTime !== incoming.time ||
+            existing.title !== incoming.match ||
+            existing.channel !== incoming.channel ||
+            existing.startDate !== incoming.startDate
+          );
+
+          if (hasChanges) {
+            updatedItems.push({ ...incoming, _prev: existing });
+          } else {
+            uptodateItems.push(incoming);
+          }
+        }
+      }));
+
+      setAnalysis({ newItems, updatedItems, uptodateItems });
+      setStep('review');
 
     } catch (err) {
-      console.error("Fetch Error:", err);
-      setError(`Failed to fetch: ${err.message}`);
-    } finally {
-      setLoading(false);
+      console.error(err);
+      setError(err.message);
+      setStep('input');
     }
   };
 
-  const handleSaveToFirestore = async () => {
-    if (matches.length === 0) return;
-    setSyncing(true);
-    setError(null);
-    setSuccess(null);
-
+  // 2. Save Changes
+  const handleConfirmSync = async () => {
+    setStep('saving');
     try {
       const batch = writeBatch(db);
-      const importCount = matches.length;
+      const toSave = [...analysis.newItems, ...analysis.updatedItems];
 
-      matches.forEach(match => {
-        const docId = match.id;
-        const docRef = doc(db, 'schedules', docId);
+      toSave.forEach(match => {
+        const docRef = doc(db, 'schedules', match.id);
+        // Clean up internal props
+        const { _prev, ...data } = match;
 
         batch.set(docRef, {
-          ...match,
-          title: match.match,
-          startTime: match.time,
-          teamA: match.teamA,
-          teamB: match.teamB,
+          ...data,
+          title: data.match,
+          startTime: data.time,
           updatedAt: new Date().toISOString(),
-          hasStartStat: false,
-          hasEndStat: false
+          // Default fields for new items only
+          ...(match._prev ? {} : { hasStartStat: false, hasEndStat: false })
         }, { merge: true });
       });
 
       await batch.commit();
 
-      setSuccess(`Successfully imported ${importCount} matches!`);
-      setMatches([]);
+      if (onSyncComplete) onSyncComplete();
 
+      // Auto close after success
       setTimeout(() => {
-        setSuccess(null);
-        if (onSyncComplete) onSyncComplete();
         onClose();
+        resetState();
       }, 1500);
+      setStep('success');
 
     } catch (err) {
-      console.error("Save error:", err);
-      setError("Failed to save to database: " + err.message);
-    } finally {
-      setSyncing(false);
+      setError("Database Error: " + err.message);
+      setStep('review');
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-[#121212] w-full max-w-2xl rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in">
+      <div className="bg-white dark:bg-[#121212] w-full max-w-2xl rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 sticky top-0 z-10">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4 text-white">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-inner"><CloudDownload size={24} /></div>
-              <div>
-                <h2 className="text-xl font-black uppercase tracking-tight leading-none">Sync Matches</h2>
-                <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-1">Import from Google Sheets</p>
-              </div>
+        <div className="p-6 bg-zinc-900 text-white sticky top-0 z-10 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 rounded-lg"><CloudDownload size={20} /></div>
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-tight">Sync Manager</h2>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Google Sheets Integration</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"><X size={20} /></button>
           </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full"><X size={20} /></button>
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
 
-          {/* Mode Selection */}
-          <div className="flex bg-zinc-100 dark:bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-            <button
-              onClick={() => { setSyncMode('daily'); setMatches([]); }}
-              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${syncMode === 'daily' ? 'bg-white dark:bg-black shadow-md text-blue-600 dark:text-blue-400' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
-            >
-              <MousePointer2 size={16} /> Daily Sync
-            </button>
-            <button
-              onClick={() => { setSyncMode('monthly'); setMatches([]); }}
-              className={`flex-1 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${syncMode === 'monthly' ? 'bg-white dark:bg-black shadow-md text-indigo-600 dark:text-indigo-400' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}
-            >
-              <CalendarRange size={16} /> Monthly Sync
-            </button>
-          </div>
-
-          {/* Date Picker & Fetch Action */}
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1 w-full space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
-                {syncMode === 'daily' ? 'Select Date' : 'Select Month'}
-              </label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-blue-500 transition-colors">
-                  <Calendar size={18} />
-                </div>
+          {/* Step 1: Input */}
+          {step === 'input' && (
+            <div className="space-y-6 animate-in slide-in-from-left-4">
+              <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl">
+                {['daily', 'monthly'].map(m => (
+                  <button key={m} onClick={() => setSyncMode(m)} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase ${syncMode === m ? 'bg-white dark:bg-black shadow text-blue-600' : 'text-zinc-400'}`}>
+                    {m} Mode
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-400 uppercase">Target Period</label>
                 {syncMode === 'daily' ? (
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-[#1a1a1a] border border-zinc-200 dark:border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 font-bold text-zinc-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm uppercase cursor-pointer"
-                  />
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono font-bold" />
                 ) : (
-                  <input
-                    type="month"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-[#1a1a1a] border border-zinc-200 dark:border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 font-bold text-zinc-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm uppercase cursor-pointer"
-                  />
+                  <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-full p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl font-mono font-bold" />
                 )}
               </div>
-            </div>
-
-            <button
-              onClick={fetchFromGAS}
-              disabled={loading}
-              className="w-full sm:w-auto h-[50px] px-8 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl font-black uppercase tracking-widest text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {loading ? 'Fetching...' : 'Fetch'}
-            </button>
-          </div>
-
-          {/* Messages */}
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={18} className="shrink-0" />
-              {error}
+              {error && <div className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg flex items-center gap-2"><AlertCircle size={14} /> {error}</div>}
             </div>
           )}
 
-          {success && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-2">
-              <CheckCircle2 size={18} className="shrink-0" />
-              {success}
+          {/* Step 2: Analyzing */}
+          {step === 'analyzing' && (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 animate-in zoom-in-95">
+              <Loader2 size={40} className="animate-spin text-blue-500" />
+              <div>
+                <h3 className="text-sm font-black uppercase">Analyzing Data...</h3>
+                <p className="text-xs text-zinc-400">Comparing Sheet vs Database</p>
+              </div>
             </div>
           )}
 
-          {/* Results Table */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-zinc-50 dark:bg-[#050505] min-h-[250px] shadow-sm relative">
-            {matches.length === 0 ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-300 dark:text-zinc-700">
-                <CloudDownload size={48} className="mb-4 opacity-20" />
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">No Data Fetched Yet</p>
+          {/* Step 3: Review */}
+          {step === 'review' && (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+              <div className="grid grid-cols-3 gap-3">
+                <StatBox label="New Entities" value={analysis.newItems.length} color="bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10" />
+                <StatBox label="Modifications" value={analysis.updatedItems.length} color="bg-amber-500/5 text-amber-600 dark:text-amber-400 border border-amber-500/10" />
+                <StatBox label="Verified" value={analysis.uptodateItems.length} color="bg-zinc-100 dark:bg-zinc-900 text-zinc-400 border border-zinc-200 dark:border-zinc-800" />
               </div>
-            ) : (
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-zinc-100 dark:bg-[#151515] text-[10px] font-black uppercase tracking-widest text-zinc-500 sticky top-0 z-10 shadow-sm">
-                    <tr>
-                      <th className="p-4 w-24">Date</th>
-                      <th className="p-4 w-20">Time</th>
-                      <th className="p-4">Match</th>
-                      <th className="p-4 w-32">Channel</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    {matches.map((m, i) => (
-                      <tr key={i} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
-                        <td className="p-4 text-zinc-500 whitespace-nowrap font-mono">{new Date(m.startDate).getDate()}/{new Date(m.startDate).getMonth() + 1}</td>
-                        <td className="p-4 font-mono font-bold">{m.time}</td>
-                        <td className="p-4 font-bold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{m.match}</td>
-                        <td className="p-4 text-blue-500 font-bold uppercase text-[10px]">{m.channel}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+              {(analysis.newItems.length > 0 || analysis.updatedItems.length > 0) ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <h4 className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Structural Comparison</h4>
+                    <span className="text-[10px] font-bold text-zinc-400">{analysis.newItems.length + analysis.updatedItems.length} changes pending</span>
+                  </div>
+                  <div className="bg-white dark:bg-[#0c0c0c] border border-zinc-100 dark:border-zinc-900 rounded-2xl overflow-hidden">
+                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar divide-y divide-zinc-50 dark:divide-zinc-900/50">
+                      {analysis.newItems.map(item => <PreviewRow key={item.id} item={item} type="new" />)}
+                      {analysis.updatedItems.map(item => <PreviewRow key={item.id} item={item} type="update" />)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center border-2 border-dashed border-zinc-100 dark:border-zinc-900 rounded-2xl bg-zinc-50/30 dark:bg-white/[0.01]">
+                  <CheckCircle2 size={32} className="mx-auto mb-3 text-emerald-500/30" />
+                  <h3 className="text-xs font-black uppercase text-zinc-900 dark:text-white">All Synchronized</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-1">Local database matches remote source</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: Success */}
+          {step === 'success' && (
+            <div className="py-12 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-500">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-emerald-500 blur-2xl opacity-20 animate-pulse" />
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg relative">
+                  <CheckCircle2 size={32} strokeWidth={2.5} />
+                </div>
               </div>
-            )}
-          </div>
+              <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">Sync Finalized</h3>
+              <p className="text-xs font-bold text-zinc-400 mt-2 uppercase tracking-widest">Operational records updated successfully</p>
+            </div>
+          )}
+
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-3 bg-white dark:bg-[#121212] z-10">
-          <button
-            onClick={onClose}
-            className="px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSaveToFirestore}
-            disabled={matches.length === 0 || syncing}
-            className={`px-8 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-lg transition-all transform active:scale-95 ${matches.length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/25' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'}`}
-          >
-            {syncing ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {syncing ? 'Importing...' : `Import ${matches.length} Matches`}
-          </button>
+        <div className="shrink-0 p-6 border-t border-zinc-100 dark:border-zinc-900 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-[#0c0c0c]">
+          {step === 'input' && (
+            <button onClick={handleAnalyze} className="w-full sm:w-auto px-8 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl font-black uppercase text-[9px] tracking-widest shadow-xl shadow-black/20 dark:shadow-white/10 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+              Analyze <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          )}
+          {step === 'review' && (
+            <>
+              <button onClick={resetState} className="px-6 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all">Back</button>
+              <button
+                onClick={handleConfirmSync}
+                disabled={analysis.newItems.length === 0 && analysis.updatedItems.length === 0}
+                className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:transform-none flex items-center justify-center gap-2"
+              >
+                <Database size={12} /> Commit
+              </button>
+            </>
+          )}
+          {step === 'saving' && (
+            <div className="flex items-center gap-2 px-8 py-3 text-[9px] font-black uppercase tracking-widest text-zinc-400">
+              <Loader2 size={12} className="animate-spin" /> Recording...
+            </div>
+          )}
         </div>
 
       </div>
     </div>
   );
 }
+
+const StatBox = ({ label, value, color }) => (
+  <div className={`px-4 py-3 rounded-xl flex flex-col items-center justify-center transition-all hover:scale-105 ${color}`}>
+    <span className="text-2xl font-black tracking-tighter mb-0.5">{value}</span>
+    <span className="text-[8px] font-black uppercase tracking-widest opacity-60 text-center">{label}</span>
+  </div>
+);
+
+const PreviewRow = ({ item, type }) => (
+  <div className="px-4 py-3 bg-white dark:bg-transparent flex items-center justify-between group hover:bg-zinc-50/50 dark:hover:bg-white/[0.02] transition-colors">
+    <div className="flex items-center gap-3 overflow-hidden">
+      <div className={`w-1 h-6 rounded-full ${type === 'new' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+      <div className="truncate">
+        <div className="text-xs font-black text-zinc-800 dark:text-zinc-100 tracking-tight">{item.match}</div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{item.league || 'Event'}</span>
+          <span className="text-[8px] font-mono font-bold text-zinc-300">•</span>
+          <span className="text-[8px] font-mono font-bold text-zinc-400">{item.time}</span>
+        </div>
+      </div>
+    </div>
+    <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${type === 'new'
+      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+      : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+      }`}>
+      {type === 'new' ? 'New' : 'Update'}
+    </div>
+  </div>
+);

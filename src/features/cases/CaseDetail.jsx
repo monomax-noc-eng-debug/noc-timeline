@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowRight, Clock, Plus
 } from 'lucide-react';
@@ -6,9 +6,8 @@ import {
 import TimelineItem from './TimelineItem';
 import EventModal from './EventModal';
 import ReportModal from './ReportModal';
+import IncidentFormModal from './components/IncidentFormModal';
 import TicketHeader from './components/ticket/TicketHeader';
-import TicketInfo from './components/ticket/TicketInfo';
-import TicketDetails from './components/ticket/TicketDetails';
 
 export default function CaseDetail({
   incident,
@@ -18,14 +17,38 @@ export default function CaseDetail({
   onDeleteEvent,
   onUpdateEvent,
   onReorderEvent,
+  onDeleteIncident,
   onBack
 }) {
+  // --- 1. ประกาศ Hooks ทั้งหมดตรงนี้ (ห้ามมี return คั่นก่อนจบ Hooks) ---
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewText, setPreviewText] = useState('');
 
-  // State: No Selection
+  // ✅ แก้ไข: ย้าย useMemo มาไว้ตรงนี้ (ก่อน if check)
+  // และเพิ่ม Optional Chaining (?.) เพื่อป้องกัน Error ตอน incident เป็น null
+  const sortedEvents = useMemo(() => {
+    if (!incident?.events) return []; // ถ้าไม่มี events ให้คืนค่าว่าง
+
+    return [...incident.events].sort((a, b) => {
+      // เช็ค Order ก่อน
+      if (typeof a.order === 'number' && typeof b.order === 'number' && a.order !== b.order) {
+        return a.order - b.order;
+      }
+
+      // เรียงตาม Date + Time (Descending - Latest first)
+      const timeA = `${a.date || '1970-01-01'}T${a.time || '00:00'}`;
+      const timeB = `${b.date || '1970-01-01'}T${b.time || '00:00'}`;
+
+      if (timeA < timeB) return 1;
+      if (timeA > timeB) return -1;
+      return 0;
+    });
+  }, [incident]); // เปลี่ยน dependency เป็น incident เพื่อความปลอดภัย
+
+  // --- 2. จุดเช็คเงื่อนไข (Early Return) ย้ายมาไว้ตรงนี้ ---
   if (!incident) return (
     <div className="flex flex-col items-center justify-center h-full bg-zinc-50 dark:bg-[#050505] transition-colors">
       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center mb-6 shadow-inner">
@@ -35,16 +58,7 @@ export default function CaseDetail({
     </div>
   );
 
-  // Sorting Logic
-  const sortedEvents = [...(incident.events || [])].sort((a, b) => {
-    if (typeof a.order === 'number' && typeof b.order === 'number' && a.order !== b.order) {
-      return a.order - b.order;
-    }
-    const dateA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`).getTime();
-    const dateB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`).getTime();
-    return dateA - dateB;
-  });
-
+  // --- 3. Logic อื่นๆ และ Render UI ---
   const handleMoveEvent = (index, direction) => {
     const tempEvents = [...sortedEvents];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -73,7 +87,15 @@ export default function CaseDetail({
     let txt = `Project: ${incident.project || '-'}\nSubject: ${incident.type || 'Incident'} | ${incident.subject || '-'} | ${dateStr}\nStatus: ${incident.status || '-'}\nTicket: ${incident.ticket || '-'}\nImpact: ${incident.impact || '-'}\nRoot Cause: ${incident.root_cause || '-'}\nAction Taken: ${incident.action || '-'}\n\n`;
     Object.keys(grouped).forEach(k => {
       txt += `${k}\n`;
-      grouped[k].forEach(ev => txt += `${ev.time} - ${ev.desc || ev.title}\n`);
+      grouped[k].forEach(ev => {
+        txt += `${ev.time} - ${ev.desc || ev.title}`;
+        // Add images to raw text report
+        const imgs = ev.imageUrls || (ev.image ? [ev.image] : []);
+        if (imgs.length > 0) {
+          imgs.forEach(url => txt += `\n📎 ${url}`);
+        }
+        txt += '\n';
+      });
       txt += `\n`;
     });
     setPreviewText(txt);
@@ -83,22 +105,14 @@ export default function CaseDetail({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#080808] relative transition-colors duration-300 overflow-hidden">
 
-      {/* 🎫 Ticket Components (Maintained in /components/ticket) */}
+      {/* Ticket Components */}
       <TicketHeader
         incident={incident}
         onUpdate={handleUpdate}
         onBack={onBack}
+        onDelete={() => onDeleteIncident(incident.id)}
+        onEdit={() => setIsInfoModalOpen(true)}
         onGenerateReport={generateReport}
-      />
-
-      <TicketInfo
-        incident={incident}
-        onUpdate={handleUpdate}
-      />
-
-      <TicketDetails
-        incident={incident}
-        onUpdate={handleUpdate}
       />
 
       {/* --- Timeline Section --- */}
@@ -118,12 +132,17 @@ export default function CaseDetail({
           </div>
         ) : (
           <div className="flex flex-col pb-24 relative max-w-3xl mx-auto">
-            {/* Timeline Line */}
-            <div className="absolute top-0 bottom-0 left-[31px] w-[2px] bg-zinc-200 dark:bg-zinc-800 z-0"></div>
+            {/* Timeline Line (Aligned to dots) */}
+            <div className="absolute top-0 bottom-0 left-[27px] w-[2px] bg-zinc-200 dark:bg-zinc-800 z-0"></div>
 
             {sortedEvents.map((ev, index) => {
               const showDateHeader = index === 0 || ev.date !== sortedEvents[index - 1].date;
-              const dateLabel = ev.date ? new Date(ev.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+              // ปรับ DateLabel ให้ปลอดภัย
+              let dateLabel = '-';
+              try {
+                dateLabel = ev.date ? new Date(ev.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+              } catch (e) { /* ignore error */ }
+
               return (
                 <TimelineItem
                   key={ev.id}
@@ -162,6 +181,12 @@ export default function CaseDetail({
         }}
       />
       <ReportModal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} text={previewText} incident={incident} />
+      <IncidentFormModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        incident={incident}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { X, Copy, Download, Check, FileText, Activity, AlertTriangle, Workflow, Wrench, Clock, Calendar } from 'lucide-react';
+import { getDirectImageUrl } from '../../utils/helpers';
 
 /**
  * ReportModal - Display and copy incident report
@@ -15,13 +16,6 @@ export default function ReportModal({ isOpen, onClose, text, incident }) {
     // MODE 1: Direct Data (High Precision)
     if (incident) {
       // Timeline mapping
-      const timeline = (incident.events || []).map(ev => ({
-        date: ev.date ? new Date(ev.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
-        time: ev.time,
-        desc: ev.desc || ev.title,
-        originalDate: ev.date // Keep for grouping check
-      }));
-
       return {
         meta: {
           Project: incident.project || '-',
@@ -34,7 +28,13 @@ export default function ReportModal({ isOpen, onClose, text, incident }) {
           'Root Cause': incident.root_cause || '-',
           'Action Taken': incident.action || '-'
         },
-        timeline
+        timeline: (incident.events || []).map(ev => ({
+          date: ev.date ? new Date(ev.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+          time: ev.time,
+          desc: ev.desc || ev.title,
+          originalDate: ev.date,
+          imageUrls: ev.imageUrls || (ev.image ? [ev.image] : [])
+        }))
       };
     }
 
@@ -269,6 +269,20 @@ export default function ReportModal({ isOpen, onClose, text, incident }) {
                           <span className="block text-xs font-black text-zinc-900 dark:text-white mb-0.5">{event.time}</span>
                         )}
                         <span className="block text-xs text-zinc-600 dark:text-zinc-400">{event.desc}</span>
+                        {event.imageUrls && event.imageUrls.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+                            {event.imageUrls.map((imgUrl, imgIdx) => (
+                              <div key={imgIdx} className="relative aspect-video rounded-lg overflow-hidden border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                                <img
+                                  src={getDirectImageUrl(imgUrl)}
+                                  alt={`Evidence ${imgIdx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => { e.target.src = 'https://placehold.co/400?text=Image+Load+Failed'; }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

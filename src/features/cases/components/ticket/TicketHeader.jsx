@@ -1,114 +1,174 @@
 import React from 'react';
 import {
-  ArrowLeft, FileText, Calendar, AlertCircle,
+  ArrowLeft, FileText, AlertCircle,
   CheckCircle2, Clock, PlayCircle, XCircle,
-  AlertTriangle, Minus, ChevronDown
+  AlertTriangle, Minus, Trash2, Settings, Zap
 } from 'lucide-react';
 
-export default function TicketHeader({ incident, onUpdate, onBack, onGenerateReport }) {
+export default function TicketHeader({
+  incident = {},
+  onUpdate = () => { },
+  onBack = () => { },
+  onDelete = () => { },
+  onEdit = () => { },
+  onGenerateReport = () => { }
+}) {
+  // ตรวจสอบเงื่อนไข Auto Format (INC-PROJ | Type | Subject)
+  const isAutoFormat = incident.subject?.includes('|') && incident.subject?.includes('-');
 
-  // Status Configuration
+  // Configuration สำหรับ Status
   const getStatusConfig = (s) => {
-    switch (s) {
-      case 'Open': return { bg: 'bg-red-50 dark:bg-red-900/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-100 dark:border-red-900/30', icon: AlertCircle };
-      case 'In Progress': return { bg: 'bg-blue-50 dark:bg-blue-900/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100 dark:border-blue-900/30', icon: PlayCircle };
-      case 'Monitoring': return { bg: 'bg-orange-50 dark:bg-orange-900/10', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-100 dark:border-orange-900/30', icon: Clock };
-      case 'Resolved': return { bg: 'bg-emerald-50 dark:bg-emerald-900/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-100 dark:border-emerald-900/30', icon: CheckCircle2 };
-      case 'Closed': return { bg: 'bg-zinc-100 dark:bg-zinc-800', text: 'text-zinc-500 dark:text-zinc-400', border: 'border-zinc-200 dark:border-zinc-700', icon: XCircle };
-      default: return { bg: 'bg-zinc-50', text: 'text-zinc-700', border: 'border-zinc-200', icon: AlertCircle };
-    }
+    const configs = {
+      'Open': { bg: 'bg-red-500/10', text: 'text-red-600', border: 'border-red-500/20', icon: AlertCircle },
+      'Pending': { bg: 'bg-amber-500/10', text: 'text-amber-600', border: 'border-amber-500/20', icon: Clock },
+      'Succeed': { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20', icon: CheckCircle2 },
+      'Closed': { bg: 'bg-zinc-500/10', text: 'text-zinc-500', border: 'border-zinc-500/20', icon: XCircle }
+    };
+    return configs[s] || { bg: 'bg-zinc-500/10', text: 'text-zinc-500', border: 'border-zinc-500/20', icon: AlertCircle };
   };
 
-  // Priority Configuration
   const getPriorityConfig = (p) => {
-    switch (p) {
-      case 'Critical': return { color: 'text-red-600', icon: AlertTriangle, bg: 'bg-red-100 dark:bg-red-900/20' };
-      case 'High': return { color: 'text-orange-500', icon: AlertTriangle, bg: 'bg-orange-100 dark:bg-orange-900/20' };
-      case 'Medium': return { color: 'text-yellow-500', icon: Minus, bg: 'bg-yellow-100 dark:bg-yellow-900/20' };
-      case 'Low': return { color: 'text-blue-500', icon: Minus, bg: 'bg-blue-100 dark:bg-blue-900/20' };
-      default: return { color: 'text-zinc-500', icon: Minus, bg: 'bg-zinc-100 dark:bg-zinc-800' };
-    }
+    const configs = {
+      'Critical': { color: 'text-red-600', icon: AlertTriangle, bg: 'bg-red-500/10' },
+      'High': { color: 'text-orange-600', icon: AlertTriangle, bg: 'bg-orange-500/10' },
+      'Medium': { color: 'text-yellow-600', icon: Minus, bg: 'bg-yellow-500/10' },
+      'Low': { color: 'text-blue-600', icon: Minus, bg: 'bg-blue-500/10' }
+    };
+    return configs[p] || { color: 'text-zinc-500', icon: Minus, bg: 'bg-zinc-500/10' };
   };
 
-  const statusConfig = getStatusConfig(incident.status);
+  const statusConfig = getStatusConfig(incident.status || 'Open');
   const StatusIcon = statusConfig.icon;
   const priorityConfig = getPriorityConfig(incident.priority || 'Medium');
   const PriorityIcon = priorityConfig.icon;
 
+  // ฟังก์ชันช่วย Parse Subject อัตโนมัติ
+  const handleSubjectChange = (e) => {
+    const val = e.target.value;
+    let updates = { subject: val };
+
+    if (val.includes('|') && val.includes('-')) {
+      const parts = val.split('|').map(p => p.trim());
+      // คาดหวังรูปแบบ: Ticket-Project | Type | Subject
+      if (parts.length >= 2) {
+        const idProjectPart = parts[0].split('-').map(p => p.trim());
+        if (idProjectPart.length >= 2) {
+          updates.ticket = idProjectPart[0];
+          updates.project = idProjectPart[1];
+
+          const typeCandidate = parts[1];
+          const validTypes = ['Incident', 'Request', 'Maintenance'];
+          updates.type = validTypes.find(t => t.toLowerCase() === typeCandidate.toLowerCase()) || typeCandidate;
+
+          if (parts.length >= 3) {
+            updates.subject = parts.slice(2).join(' | ');
+          }
+        }
+      }
+    }
+    onUpdate(updates);
+  };
+
   return (
-    <div className="relative px-6 py-6 border-b border-zinc-200 dark:border-zinc-800 z-20 shrink-0 bg-white dark:bg-[#080808]">
+    <div className="relative px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 z-20 shrink-0 bg-white dark:bg-[#080808] transition-all duration-300">
+      <div className="flex items-center justify-between gap-4">
 
-      {/* Mobile Back Button */}
-      <div className="lg:hidden mb-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-zinc-500 hover:text-black dark:hover:text-white font-black uppercase text-[10px] tracking-widest px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-          <ArrowLeft size={14} /> BACK TO LIST
-        </button>
-      </div>
+        {/* Left Section: Actions & Tags */}
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <button
+            onClick={onBack}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-400 hover:text-black dark:text-zinc-500 dark:hover:text-white transition-all"
+          >
+            <ArrowLeft size={14} />
+          </button>
 
-      {/* Meta Row: Status & Priority */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4">
+          <div className="w-px h-4 bg-zinc-100 dark:bg-zinc-800 mx-1" />
 
-          {/* Status Dropdown */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusConfig.bg} ${statusConfig.border} border transition-colors`}>
-            <StatusIcon size={14} className={statusConfig.text} />
-            <select
-              value={incident.status || 'Open'}
-              onChange={(e) => onUpdate({ status: e.target.value })}
-              className={`bg-transparent font-black uppercase text-[10px] tracking-widest cursor-pointer outline-none ${statusConfig.text}`}
-            >
-              {['Open', 'In Progress', 'Monitoring', 'Resolved', 'Closed'].map(s => (
-                <option key={s} className="bg-white dark:bg-zinc-900 text-black dark:text-white" value={s}>{s}</option>
-              ))}
-            </select>
-            <ChevronDown size={12} className={`opacity-50 ${statusConfig.text} pointer-events-none`} />
+          <div className="flex items-center gap-1">
+            {/* Status Pill */}
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${statusConfig.border} ${statusConfig.bg}`}>
+              <StatusIcon size={10} className={statusConfig.text} />
+              <select
+                value={incident.status || 'Open'}
+                onChange={(e) => onUpdate({ status: e.target.value })}
+                className={`bg-transparent font-black uppercase text-[8px] tracking-wider cursor-pointer outline-none border-none p-0 focus:ring-0 ${statusConfig.text}`}
+              >
+                {['Open', 'Pending', 'Succeed', 'Closed'].map(s => (
+                  <option key={s} value={s} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Priority Pill */}
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border border-transparent ${priorityConfig.bg}`}>
+              <PriorityIcon size={10} className={priorityConfig.color} />
+              <select
+                value={incident.priority || 'Medium'}
+                onChange={(e) => onUpdate({ priority: e.target.value })}
+                className={`bg-transparent font-black uppercase text-[8px] tracking-wider cursor-pointer outline-none border-none p-0 focus:ring-0 ${priorityConfig.color}`}
+              >
+                {['Critical', 'High', 'Medium', 'Low'].map(p => (
+                  <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">{p}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800" />
-
-          {/* Priority Dropdown */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${priorityConfig.bg} transition-colors`}>
-            <PriorityIcon size={14} className={priorityConfig.color} />
-            <select
-              value={incident.priority || 'Medium'}
-              onChange={(e) => onUpdate({ priority: e.target.value })}
-              className={`bg-transparent font-bold uppercase text-[10px] tracking-wider cursor-pointer outline-none ${priorityConfig.color}`}
-            >
-              {['Critical', 'High', 'Medium', 'Low'].map(p => (
-                <option key={p} className="bg-white dark:bg-zinc-900 text-black dark:text-white" value={p}>{p} Priority</option>
-              ))}
-            </select>
-            <ChevronDown size={12} className={`opacity-50 ${priorityConfig.color} pointer-events-none`} />
-          </div>
-
-          <div className="hidden sm:block h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800" />
-
-          {/* Create Date */}
-          <div className="hidden sm:flex items-center gap-2 text-zinc-400">
-            <Calendar size={14} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">
-              {incident.createdAt ? new Date(incident.createdAt).toLocaleDateString('en-GB') : '-'}
+          {/* Meta Info (Desktop only) */}
+          <div className="hidden lg:flex items-center gap-2 ml-2">
+            <span className="text-[10px] font-mono font-black text-blue-500 tracking-tighter opacity-70">
+              #{incident.ticket || 'NO-ID'}
+            </span>
+            <div className="h-1 w-1 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+            <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest truncate max-w-[100px]">
+              {incident.project || 'GENERAL'}
             </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button onClick={onGenerateReport} className="flex items-center gap-2 px-4 py-2 text-zinc-500 hover:text-blue-500 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Generate Report">
-            <FileText size={16} /> <span className="text-xs font-bold hidden sm:inline">Report</span>
-          </button>
+        {/* Center Section: Input Subject */}
+        <div className="flex-1 max-w-2xl relative group px-2">
+          <input
+            type="text"
+            className="w-full text-sm md:text-base font-black text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 border-none bg-transparent p-0 focus:ring-0 leading-tight transition-all"
+            value={incident.subject || ''}
+            onChange={handleSubjectChange}
+            placeholder="Auto Parsing..."
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+            <Zap
+              size={12}
+              className={`transition-all duration-500 ${isAutoFormat
+                  ? 'text-emerald-500 fill-current animate-pulse'
+                  : 'text-zinc-200 dark:text-zinc-800'
+                }`}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Subject Input (Large) */}
-      <div>
-        <input
-          type="text"
-          className="w-full text-2xl md:text-3xl font-black text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 border-none bg-transparent p-0 focus:ring-0 leading-tight transition-colors"
-          value={incident.subject || ''}
-          onChange={(e) => onUpdate({ subject: e.target.value })}
-          placeholder="Incident Subject..."
-        />
+        {/* Right Section: Action Buttons */}
+        <div className="flex items-center gap-0.5">
+          <button onClick={onGenerateReport} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-all" title="Report">
+            <FileText size={14} />
+          </button>
+          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-orange-500 transition-all" title="Settings">
+            <Settings size={14} />
+          </button>
+          <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-all" title="Delete">
+            <Trash2 size={14} />
+          </button>
+
+          <div className="w-px h-4 bg-zinc-100 dark:bg-zinc-800 mx-1 hidden sm:block" />
+
+          {/* Timestamp */}
+          <div className="flex flex-col items-end shrink-0 hidden sm:flex ml-1">
+            <span className="text-[7px] font-black text-zinc-300 dark:text-zinc-600 uppercase tracking-widest">Date</span>
+            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 tracking-tighter mt-0.5">
+              {incident.createdAt ? new Date(incident.createdAt).toLocaleDateString('en-GB') : 'N/A'}
+            </span>
+          </div>
+        </div>
+
       </div>
     </div>
   );

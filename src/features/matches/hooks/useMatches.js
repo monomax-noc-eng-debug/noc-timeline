@@ -1,72 +1,84 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { format } from 'date-fns';
+import { useState, useMemo } from 'react';
 
-export const useMatches = (dateFilter) => {
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [groupedData, setGroupedData] = useState([]);
+// Fetcher Function
+const fetchMatches = async ({ queryKey }) => {
+  const [_, { dateFilter, dateRange, limit: itemsLimit }] = queryKey;
+  const scheduleRef = collection(db, 'schedules');
+  let q;
 
-  useEffect(() => {
-    setLoading(true);
+  // 1. Single Date (Today)
+  if (dateFilter) {
+    const dateStr = dateFilter instanceof Date ? format(dateFilter, 'yyyy-MM-dd') : dateFilter;
+    q = query(scheduleRef, where('startDate', '==', dateStr), orderBy('startTime', 'asc'));
+  }
+  // 2. Date Range (Calendar)
+  else if (dateRange?.start && dateRange?.end) {
+    q = query(
+      scheduleRef,
+      where('startDate', '>=', dateRange.start),
+      where('startDate', '<=', dateRange.end),
+      orderBy('startDate', 'asc'),
+      orderBy('startTime', 'asc')
+    );
+  }
+  // 3. Default List (Archive)
+  else {
+    q = query(scheduleRef, orderBy('startDate', 'desc'), orderBy('startTime', 'asc'), limit(itemsLimit));
+  }
 
-    let q = collection(db, 'schedules');
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      hasStartStat: !!data.hasStartStat,
+      hasEndStat: !!data.hasEndStat,
+      // 🚀 Performance: เตรียม search string รวมวันที่เข้าไปด้วย เพื่อให้ค้นหาได้เร็วกว่าเดิม
+      _searchString: `${data.teamA || ''} ${data.teamB || ''} ${data.match || ''} ${data.title || ''} ${data.league || ''} ${data.startDate || ''}`.toLowerCase()
+    };
+  });
+};
 
-    // ตรวจสอบว่าเป็นหน้ารายวัน (Today) หรือหน้าประวัติ (Archive)
-    if (dateFilter) {
-      // แปลง dateFilter เป็น string yyyy-MM-dd ให้ตรงกับ Database
-      const dateStr = dateFilter instanceof Date ? format(dateFilter, 'yyyy-MM-dd') : dateFilter;
-      q = query(
-        collection(db, 'schedules'),
-        where('startDate', '==', dateStr),
-        orderBy('startTime', 'asc')
-      );
-    } else {
-      q = query(
-        collection(db, 'schedules'),
-        orderBy('startDate', 'desc'),
-        orderBy('startTime', 'asc')
-      );
+export const useMatches = (dateFilter, dateRange, enabled = true) => {
+  const [itemsLimit, setItemsLimit] = useState(100);
+
+  const { data: matches = [], isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['matches', { dateFilter, dateRange, limit: itemsLimit }],
+    queryFn: fetchMatches,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 🚀 เก็บข้อมูลใน Cache ไว้ 5 นาที (ไม่ต้องโหลดใหม่ตอนสลับหน้า)
+    gcTime: 1000 * 60 * 30, // เก็บไว้ใน Memory นานขึ้น
+    enabled: enabled, // 🚀 ควบคุมการ Fetch ได้ (เช่น รอให้มี Range ก่อนค่อยดึง)
+  });
+
+  // Grouping Helper (Memoized เพื่อลดการคำนวณซ้ำ)
+  const groupedData = useMemo(() => {
+    if (matches.length === 0) return [];
+    const groups = {};
+    for (const match of matches) {
+      const date = match.startDate;
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(match);
     }
+    return Object.entries(groups).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+  }, [matches]);
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      // ✅ ดึงข้อมูล matches พร้อมกับ hasStartStat และ hasEndStat ที่บันทึกไว้แล้ว
-      const results = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          // ใช้ค่า hasStartStat และ hasEndStat ที่มีอยู่ใน document แล้ว
-          // (useMatchStats บันทึกไว้ตอน save statistics)
-          hasStartStat: data.hasStartStat || false,
-          hasEndStat: data.hasEndStat || false
-        };
-      });
+  const loadMore = () => {
+    if (!dateFilter && !dateRange) setItemsLimit(prev => prev + 50);
+  };
 
-      setMatches(results);
-
-      // จัดกลุ่มข้อมูลตามวันที่ (สำหรับหน้า HistoryPage)
-      const groups = results.reduce((acc, match) => {
-        const date = match.startDate;
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(match);
-        return acc;
-      }, {});
-
-      const sortedGroups = Object.entries(groups).sort((a, b) =>
-        new Date(b[0]) - new Date(a[0])
-      );
-
-      setGroupedData(sortedGroups);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching realtime matches:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [dateFilter]);
-
-  return { matches, groupedData, loading };
+  return {
+    matches,
+    groupedData,
+    loading: isLoading, // Initial Load
+    isFetching, // Background Update
+    loadMore,
+    hasMore: true,
+    refetch
+  };
 };

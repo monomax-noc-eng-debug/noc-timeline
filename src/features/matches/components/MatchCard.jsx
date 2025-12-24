@@ -1,56 +1,64 @@
-import React from 'react';
+// src/features/matches/components/MatchCard.jsx
+import React, { memo, useMemo } from 'react';
 import {
   Clock, Trophy, Tv, Pencil, Trash2, Eye, BarChart3,
-  CheckCircle2, Radio
+  CheckCircle2, Radio, Timer
 } from 'lucide-react';
 
-export default function MatchCard({ match, onClick, onEdit, onDelete, selectable, selected, onSelect }) {
+const MatchCard = memo(({ match, onClick, onEdit, onDelete, selectable, selected, onSelect }) => {
 
-  // --- 1. Determine Status ---
-  const getStatus = () => {
+  const status = useMemo(() => {
+    // Priority 1: Smart Status จาก Hook/DB
+    if (match.isLiveTime) return 'LIVE';
+    if (match.statusDisplay?.includes('Finished')) return 'FINISHED';
+
+    // ถ้ามี Countdown เป็นนาที (มาจากระบบคำนวณสด)
+    if (match.countdown && match.countdown.toString().includes('m')) return 'SOON';
+
+    // Priority 2: Fallback Logic
     if (match.hasEndStat) return 'FINISHED';
     if (match.hasStartStat && !match.hasEndStat) return 'LIVE';
 
-    // Check for "Starting Soon" (within 15 mins)
-    if (match.startTime) {
+    // ✅ FIX: เช็ค Starting Soon (ต้องเป็น "วันนี้" เท่านั้น และเวลาต่างกันไม่เกิน 15 นาที)
+    if (match.startTime && match.startDate) {
       const now = new Date();
-      const [hours, minutes] = match.startTime.split(':').map(Number);
-      const matchDate = new Date();
-      matchDate.setHours(hours, minutes, 0, 0);
+      // แปลงวันที่ปัจจุบันเป็น YYYY-MM-DD เพื่อเทียบกับ match.startDate
+      // หมายเหตุ: ใช้ toLocaleDateString('en-CA') จะได้ format YYYY-MM-DD ตาม local time
+      const todayStr = now.toLocaleDateString('en-CA');
+      const isToday = match.startDate === todayStr;
 
-      const diffMs = matchDate - now;
-      const diffMins = diffMs / (1000 * 60);
+      if (isToday) {
+        const [hours, minutes] = match.startTime.split(':').map(Number);
+        const matchDate = new Date();
+        matchDate.setHours(hours, minutes, 0, 0);
 
-      if (diffMins > 0 && diffMins <= 15) return 'SOON';
+        const diffMs = matchDate - now;
+        const diffMins = diffMs / (1000 * 60);
+
+        // ถ้าเป็นวันนี้ และอีกไม่เกิน 15 นาทีจะเริ่ม -> SOON
+        if (diffMins > 0 && diffMins <= 15) return 'SOON';
+      }
     }
 
     return 'UPCOMING';
-  };
-
-  const status = getStatus();
+  }, [match]);
 
   // --- 2. Get Stats ---
-  // Change from BW to Viewers
-  const getViewerCount = () => {
+  const viewerCount = useMemo(() => {
     if (match.endStats?.muxViewerUniq) return match.endStats.muxViewerUniq;
     if (match.startStats?.muxViewerUniq) return match.startStats.muxViewerUniq;
     return 0;
-  };
+  }, [match.endStats, match.startStats]);
 
-  // Helper to format large numbers (e.g. 1.2M, 500k)
   const formatCompact = (numStr) => {
     if (!numStr) return '0';
-    // If it's complex string with unit, try to parse
     const num = parseFloat(numStr.toString().replace(/,/g, ''));
     if (isNaN(num)) return numStr;
-
     return Intl.NumberFormat('en-US', {
       notation: "compact",
       maximumFractionDigits: 1
     }).format(num);
   };
-
-  const viewerCount = getViewerCount();
 
   return (
     <div
@@ -93,10 +101,15 @@ export default function MatchCard({ match, onClick, onEdit, onDelete, selectable
               </div>
             )}
 
+            {/* ✅ แก้ไข: แสดง Countdown Text ถ้ามี */}
             {status === 'SOON' && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-500 text-white rounded-lg shadow-md shadow-orange-500/20 animate-pulse">
-                <Clock size={14} className="stroke-[3]" />
-                <span className="text-xs font-black uppercase tracking-wider">Starting Soon</span>
+                <Timer size={14} className="stroke-[3]" />
+                <span className="text-xs font-black uppercase tracking-wider">
+                  {match.countdown && match.countdown.includes('m')
+                    ? `Starts in ${match.countdown}`
+                    : 'Starting Soon'}
+                </span>
               </div>
             )}
 
@@ -158,17 +171,27 @@ export default function MatchCard({ match, onClick, onEdit, onDelete, selectable
 
           {/* Match Title */}
           <div className="flex items-center gap-3">
-            {/* Time Display */}
+
+            {/* ✅ แก้ไข: กล่องแสดงเวลา (Time Box) ให้แสดง Countdown ได้ */}
             <div className={`shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-xl border transition-colors ${status === 'SOON'
               ? 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800'
               : 'bg-zinc-100 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700'
               }`}>
-              {(status === 'LIVE') ? (
+              {status === 'LIVE' ? (
                 <>
                   <Radio size={16} className="text-red-500 mb-1 animate-pulse" />
                   <span className="text-[10px] font-black text-red-500 uppercase">Live</span>
                 </>
+              ) : (status === 'SOON' && match.countdown && match.countdown.includes('m')) ? (
+                // ถ้าใกล้เริ่ม ให้โชว์ตัวเลขนาทีถอยหลัง ตัวใหญ่ๆ
+                <>
+                  <span className="text-xl font-black font-mono leading-none text-orange-500">
+                    {match.countdown.replace('m', '')}
+                  </span>
+                  <span className="text-[10px] font-bold text-orange-400 uppercase">mins</span>
+                </>
               ) : (
+                // ถ้ายังไม่เริ่ม ให้โชว์เวลาปกติ (HH:mm)
                 <>
                   <span className={`text-xl font-black font-mono leading-none ${status === 'SOON' ? 'text-orange-500' : 'text-zinc-900 dark:text-white'
                     }`}>{match.startTime?.split(':')[0] || '--'}</span>
@@ -202,8 +225,8 @@ export default function MatchCard({ match, onClick, onEdit, onDelete, selectable
             </div>
           </div>
 
-          {/* Stats Row (Viewers instead of BW) */}
-          {(status === 'LIVE' || status === 'FINISHED') && viewerCount && (
+          {/* Stats Row */}
+          {(status === 'LIVE' || status === 'FINISHED') && viewerCount > 0 && (
             <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-400">
                 <Eye size={14} className="text-violet-500" />
@@ -224,4 +247,7 @@ export default function MatchCard({ match, onClick, onEdit, onDelete, selectable
       </button>
     </div>
   );
-}
+});
+
+MatchCard.displayName = 'MatchCard';
+export default MatchCard;

@@ -53,6 +53,10 @@ export const useIncidents = () => {
       const matchesType = filterType === 'All' || incident.type === filterType;
 
       return matchesSearch && matchesStatus && matchesType;
+    }).sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return dateB - dateA;
     });
   }, [incidents, searchTerm, filterStatus, filterType]);
 
@@ -61,11 +65,13 @@ export const useIncidents = () => {
     const total = incidents.length;
     const open = incidents.filter(i => i.status === 'Open').length;
     const inProgress = incidents.filter(i => i.status === 'In Progress').length;
+    const pending = incidents.filter(i => i.status === 'Pending').length;
     const monitoring = incidents.filter(i => i.status === 'Monitoring').length;
+    const succeed = incidents.filter(i => i.status === 'Succeed').length;
     const resolved = incidents.filter(i => i.status === 'Resolved').length;
     const closed = incidents.filter(i => i.status === 'Closed').length;
 
-    return { total, open, inProgress, monitoring, resolved, closed };
+    return { total, open, inProgress, pending, monitoring, succeed, resolved, closed };
   }, [incidents]);
 
   // Get status distribution for charts
@@ -73,8 +79,10 @@ export const useIncidents = () => {
     return [
       { status: 'Open', count: stats.open, color: '#ef4444' },
       { status: 'In Progress', count: stats.inProgress, color: '#3b82f6' },
+      { status: 'Pending', count: stats.pending, color: '#f59e0b' },
       { status: 'Monitoring', count: stats.monitoring, color: '#f97316' },
-      { status: 'Resolved', count: stats.resolved, color: '#10b981' },
+      { status: 'Succeed', count: stats.succeed, color: '#10b981' },
+      { status: 'Resolved', count: stats.resolved, color: '#059669' },
       { status: 'Closed', count: stats.closed, color: '#6b7280' },
     ].filter(item => item.count > 0);
   }, [stats]);

@@ -5,39 +5,39 @@ export default function ConfirmModal({ isOpen, onClose, title, message, onConfir
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl border border-gray-200 overflow-hidden dark:bg-[#111] dark:border-[#333]">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#0a0a0a] w-full max-w-[320px] rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden scale-in-center animate-in zoom-in-95 duration-200">
 
-        {/* Header */}
-        <div className={`px-4 py-3 flex items-center gap-3 border-b border-gray-200 ${isDanger ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-[#000]'}`}>
-          <div className={`p-2 rounded-full ${isDanger ? 'bg-red-100 text-red-600' : 'bg-[#1F2937] text-white dark:bg-[#F2F2F2] dark:text-[#000000]'}`}>
-            {isDanger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}
+        {/* Header Section (Compact) */}
+        <div className={`px-4 py-3 flex items-center gap-2.5 ${isDanger ? 'bg-red-50/50 dark:bg-red-950/20' : 'bg-zinc-50/50 dark:bg-zinc-900/40'}`}>
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isDanger ? 'bg-red-100 text-red-600 dark:bg-red-900/30' : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'}`}>
+            {isDanger ? <AlertTriangle size={16} /> : <HelpCircle size={16} />}
           </div>
-          <h3 className={`font-bold text-lg ${isDanger ? 'text-red-700 dark:text-red-400' : 'text-[#1F2937] dark:text-[#F2F2F2]'}`}>
+          <h3 className={`text-xs font-black uppercase tracking-tight ${isDanger ? 'text-red-700 dark:text-red-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
             {title}
           </h3>
         </div>
 
-        {/* Body */}
-        <div className="p-5">
-          <p className="text-gray-700 dark:text-[#F2F2F2] text-sm leading-relaxed font-medium">
+        {/* Message Area */}
+        <div className="px-5 py-4">
+          <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-normal font-bold uppercase tracking-tight">
             {message}
           </p>
         </div>
 
-        {/* Footer */}
-        <div className="p-3 bg-gray-50 flex justify-end gap-2 border-t border-gray-200 dark:bg-[#000] dark:border-[#333]">
+        {/* Actions (Slim) */}
+        <div className="px-3 py-2.5 bg-zinc-50/50 dark:bg-zinc-900/20 flex justify-end gap-1.5 border-t border-zinc-100 dark:border-zinc-800/50">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:bg-gray-200 dark:hover:bg-[#222] dark:hover:text-[#F2F2F2] transition-colors"
+            className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg text-sm font-bold text-white shadow-md transition-transform active:scale-95 ${isDanger
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-[#1F2937] hover:bg-black dark:bg-[#F2F2F2] dark:text-[#000000] dark:hover:bg-[#ccc]'
+            className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-white shadow-lg transition-all active:scale-95 ${isDanger
+              ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
+              : 'bg-zinc-900 dark:bg-white dark:text-black hover:opacity-90 shadow-zinc-500/20'
               }`}
           >
             Confirm

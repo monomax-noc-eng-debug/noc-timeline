@@ -1,6 +1,8 @@
 // file: src/utils/helpers.js
 
-// ฟังก์ชันคำนวณสถานะเวลาของแมตช์ (คงเดิม)
+/**
+ * ฟังก์ชันคำนวณสถานะเวลาของแมตช์
+ */
 export const getMatchTimeStatus = (startDate, startTime, currentTime = new Date()) => {
   if (!startDate || !startTime) return { status: 'UNKNOWN', text: '', color: 'text-gray-400' };
 
@@ -16,42 +18,47 @@ export const getMatchTimeStatus = (startDate, startTime, currentTime = new Date(
   return { status: 'NORMAL', text: '', color: 'text-gray-400' };
 };
 
-// ✅ แก้ไขใหม่: รองรับ URL แบบฟรี (Google Drive / Dropbox)
+/**
+ * ✅ แก้ไขใหม่: รองรับ URL แบบ Direct Link (Google Drive / Dropbox)
+ */
 export const getDirectImageUrl = (url) => {
   if (!url) return '';
-
   try {
-    // 1. กรณีเป็น Google Drive
-    // ใช้เทคนิค lh3.googleusercontent.com เพื่อโหลดรูปแบบ Direct Link ฟรี
+    const urlObj = new URL(url);
+
+    // 1. Google Drive
     if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
-      let id = '';
-      const parts = url.match(/\/d\/(.+?)\//);
-      if (parts && parts[1]) {
-        id = parts[1];
-      } else {
-        const params = new URLSearchParams(new URL(url).search);
-        id = params.get('id');
+      let id = urlObj.searchParams.get('id');
+
+      if (!id) {
+        // Updated regex to stop at /, ?, or &
+        const parts = url.match(/\/d\/(.+?)(?:\/|\?|&|$)/);
+        if (parts && parts[1]) {
+          id = parts[1];
+        }
       }
 
       if (id) {
-        // ใช้ URL นี้จะโหลดเร็วกว่าและไม่ติด redirect
         return `https://lh3.googleusercontent.com/d/${id}`;
       }
     }
 
-    // 2. กรณีเป็น Dropbox
-    // เปลี่ยน ?dl=0 เป็น ?raw=1 เพื่อให้เป็น direct image link
+    // 2. Dropbox
     if (url.includes('dropbox.com')) {
-      const newUrl = new URL(url);
-      newUrl.searchParams.set('raw', '1');
-      newUrl.searchParams.delete('dl');
-      return newUrl.toString();
+      urlObj.searchParams.set('raw', '1');
+      urlObj.searchParams.delete('dl');
+      return urlObj.toString();
     }
 
-    // 3. URL ปกติ หรือ URL ที่แก้ไม่ได้
     return url;
   } catch (e) {
-    console.warn("Error parsing image URL:", e);
+    // If not a valid URL, check for typical Drive patterns anyway
+    if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
+      const parts = url.match(/\/d\/(.+?)(?:\/|\?|&|$)/);
+      if (parts && parts[1]) {
+        return `https://lh3.googleusercontent.com/d/${parts[1]}`;
+      }
+    }
     return url;
   }
 };

@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { X, ImagePlus, Trash2, Save, Loader2, Clock, Calendar, FileText, ChevronRight, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ImagePlus, Trash2, Save, Loader2, Clock, Calendar, FileText, ChevronRight, AlertCircle, Link as LinkIcon, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { getDirectImageUrl } from '../../utils/helpers';
 import ImageUploader from '../../components/forms/ImageUploader';
+import { uploadLocalFileToDrive } from '../../utils/driveUpload'; // ฟังก์ชันอัปโหลดที่เราสร้างไว้
 
 export default function EventModal({ isOpen, onClose, onSubmit, initialData, saving = false }) {
   const [formData, setFormData] = useState({ date: '', time: '', desc: '', imageUrls: [] });
   const [tempImageUrl, setTempImageUrl] = useState('');
+  const [uploadMode, setUploadMode] = useState('link'); // 'link' หรือ 'upload'
+  const [isUploadingLocal, setIsUploadingLocal] = useState(false);
   const [errors, setErrors] = useState({});
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -36,10 +40,31 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
     }
   }, [isOpen, initialData]);
 
-  const handleAddImage = () => {
-    if (tempImageUrl && !formData.imageUrls.includes(tempImageUrl)) {
-      setFormData(prev => ({ ...prev, imageUrls: [...prev.imageUrls, tempImageUrl] }));
+  const handleAddImage = (url) => {
+    const targetUrl = url || tempImageUrl;
+    if (targetUrl && !formData.imageUrls.includes(targetUrl)) {
+      setFormData(prev => ({ ...prev, imageUrls: [...prev.imageUrls, targetUrl] }));
       setTempImageUrl('');
+    }
+  };
+
+  const handleLocalUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingLocal(true);
+    try {
+      const res = await uploadLocalFileToDrive(file);
+      if (res.result === "success") {
+        handleAddImage(res.url);
+      } else {
+        alert("Upload failed: " + res.error);
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsUploadingLocal(false);
+      e.target.value = ''; // Reset input
     }
   };
 
@@ -83,31 +108,13 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
 
   if (!isOpen) return null;
 
-  // Input Style ที่ดูนุ่มนวลและมี Focus State ชัดเจน
-  const inputBaseClass = `
-    w-full bg-zinc-50 dark:bg-zinc-800/50 
-    border border-zinc-200 dark:border-zinc-700 
-    rounded-xl p-3.5 text-sm font-medium 
-    text-zinc-900 dark:text-zinc-100
-    outline-none transition-all duration-200 ease-out
-    focus:bg-white dark:focus:bg-zinc-800 
-    focus:border-black dark:focus:border-zinc-500
-    focus:ring-4 focus:ring-zinc-100 dark:focus:ring-zinc-800/50
-    focus:shadow-sm
-    placeholder:text-zinc-400
-  `;
-
+  const inputBaseClass = `w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none transition-all duration-200 focus:bg-white dark:focus:bg-zinc-800 focus:border-black dark:focus:border-zinc-500 focus:ring-4 focus:ring-zinc-100 dark:focus:ring-zinc-800/50 placeholder:text-zinc-400`;
   const labelClass = "text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 ml-1";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      {/* Backdrop with Blur */}
-      <div
-        className="absolute inset-0 bg-zinc-900/40 dark:bg-black/80 backdrop-blur-md transition-opacity duration-300"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-zinc-900/40 dark:bg-black/80 backdrop-blur-md transition-opacity duration-300" onClick={onClose} />
 
-      {/* Modal Card */}
       <div className="relative w-full max-w-lg bg-white dark:bg-[#121212] rounded-[2rem] shadow-2xl ring-1 ring-zinc-900/5 dark:ring-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out">
 
         {/* Header */}
@@ -117,117 +124,116 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
               {initialData ? <FileText className="text-blue-500" size={20} /> : <Clock className="text-violet-500" size={20} />}
               {initialData ? 'Edit Event' : 'New Event'}
             </h3>
-            <p className="text-xs text-zinc-500 font-medium mt-0.5 ml-7">
-              {initialData ? 'Update incident timeline details' : 'Record a new update to timeline'}
-            </p>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5 ml-7">Update incident timeline details</p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="p-2.5 -mr-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all duration-200 hover:rotate-90 active:scale-90"
-          >
+          <button onClick={onClose} disabled={saving} className="p-2.5 -mr-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all duration-200 hover:rotate-90 active:scale-90">
             <X size={22} />
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6 space-y-7">
+          <div className="p-6 space-y-6">
 
             {/* Date & Time Row */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className={labelClass}><Calendar size={12} /> Date</label>
-                <input
-                  type="date"
-                  className={`${inputBaseClass} ${errors.date ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
-                  value={formData.date}
-                  onChange={e => setFormData({ ...formData, date: e.target.value })}
-                />
+                <input type="date" className={`${inputBaseClass} ${errors.date ? 'border-red-500' : ''}`} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
               </div>
               <div className="space-y-1">
                 <label className={labelClass}><Clock size={12} /> Time</label>
-                <input
-                  type="time"
-                  className={`${inputBaseClass} ${errors.time ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
-                  value={formData.time}
-                  onChange={e => setFormData({ ...formData, time: e.target.value })}
-                />
+                <input type="time" className={`${inputBaseClass} ${errors.time ? 'border-red-500' : ''}`} value={formData.time} onChange={e => setFormData({ ...formData, time: e.target.value })} />
               </div>
             </div>
 
             {/* Description */}
             <div className="space-y-1">
               <label className={labelClass}><FileText size={12} /> Description</label>
-              <textarea
-                rows={4}
-                placeholder="What happened? Describe the details..."
-                className={`${inputBaseClass} resize-none leading-relaxed min-h-[120px] ${errors.desc ? 'border-red-500 focus:border-red-500 focus:ring-red-100' : ''}`}
-                value={formData.desc}
-                onChange={e => setFormData({ ...formData, desc: e.target.value })}
-              />
-              {errors.desc && (
-                <p className="text-[10px] font-bold text-red-500 mt-1.5 flex items-center gap-1.5 animate-pulse ml-1">
-                  <AlertCircle size={10} /> {errors.desc}
-                </p>
-              )}
+              <textarea rows={3} placeholder="" className={`${inputBaseClass} resize-none min-h-[100px] ${errors.desc ? 'border-red-500' : ''}`} value={formData.desc} onChange={e => setFormData({ ...formData, desc: e.target.value })} />
             </div>
 
-            {/* Image Attachments Section */}
-            <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            {/* Attachments Section - Compact Design */}
+            <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center justify-between px-1">
                 <label className={labelClass.replace('mb-2', 'mb-0')}><ImagePlus size={12} /> Attachments</label>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${formData.imageUrls.length > 0 ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white' : 'text-zinc-300'}`}>
-                  {formData.imageUrls.length} Files
-                </span>
+                <span className="text-[10px] font-bold text-zinc-400">{formData.imageUrls.length} Files</span>
               </div>
 
-              {/* Add Image Control */}
-              <div className="bg-zinc-50 dark:bg-zinc-800/30 p-2 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 flex gap-2">
-                <div className="flex-1">
-                  <ImageUploader
-                    value={tempImageUrl}
-                    onChange={setTempImageUrl}
-                    folder="incidents"
-                    placeholder="Paste image URL here..."
-                  />
+              <div className="bg-zinc-100/50 dark:bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                {/* Mode Selector */}
+                <div className="flex p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('link')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${uploadMode === 'link' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black shadow-sm' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
+                  >
+                    <LinkIcon size={12} strokeWidth={3} /> Link URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('upload')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${uploadMode === 'upload' ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black shadow-sm' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
+                  >
+                    <UploadCloud size={12} strokeWidth={3} /> Upload
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  disabled={!tempImageUrl}
-                  className="w-14 shrink-0 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl hover:bg-black dark:hover:bg-zinc-200 hover:shadow-lg hover:shadow-zinc-300 dark:hover:shadow-none hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 disabled:opacity-30 disabled:transform-none disabled:shadow-none flex items-center justify-center"
-                  title="Add Image"
-                >
-                  <ChevronRight size={24} strokeWidth={3} />
-                </button>
+
+                {/* Controls */}
+                <div className="mt-1 p-1">
+                  {uploadMode === 'link' ? (
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          placeholder="Paste image URL here..."
+                          className="w-full h-11 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 text-xs outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-700"
+                          value={tempImageUrl}
+                          onChange={e => setTempImageUrl(e.target.value)}
+                        />
+                        <LinkIcon size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddImage()}
+                        disabled={!tempImageUrl}
+                        className="w-11 h-11 shrink-0 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-20"
+                      >
+                        <ChevronRight size={20} strokeWidth={3} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all cursor-pointer relative overflow-hidden" onClick={() => !isUploadingLocal && fileInputRef.current.click()}>
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLocalUpload} />
+                      {isUploadingLocal ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 size={24} className="animate-spin text-blue-500" />
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase">Uploading...</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <ImageIcon size={24} className="text-zinc-400" />
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase">Click to select file</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Gallery Grid (Interactive) */}
+              {/* Gallery Grid */}
               {formData.imageUrls.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="grid grid-cols-4 gap-2 px-1">
                   {formData.imageUrls.map((url, index) => (
-                    <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <img
                         src={getDirectImageUrl(url)}
-                        alt={`attachment-${index}`}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        onError={(e) => { e.target.src = 'https://placehold.co/100?text=Error'; }}
+                        alt="attachment"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.src = 'https://placehold.co/400?text=Image+Not+Found'; }}
                       />
-                      {/* Overlay & Remove Button */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-[1px]">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImageUrl(index)}
-                          className="p-2.5 bg-white/90 text-red-500 rounded-full shadow-lg hover:bg-red-500 hover:text-white hover:scale-110 active:scale-90 transition-all duration-200"
-                          title="Remove Image"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] px-1.5 py-0.5 rounded font-bold backdrop-blur-sm pointer-events-none">
-                        #{index + 1}
-                      </div>
+                      <button type="button" onClick={() => handleRemoveImageUrl(index)} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -237,14 +243,14 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
           </div>
 
           {/* Footer */}
-          <div className="p-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 backdrop-blur-sm sticky bottom-0">
+          <div className="p-6 pt-4 bg-white dark:bg-[#121212] sticky bottom-0 border-t border-zinc-100 dark:border-zinc-800">
             <button
               type="submit"
               disabled={saving}
-              className="w-full h-14 bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-white dark:to-zinc-200 text-white dark:text-black rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-zinc-500/20 dark:shadow-zinc-900/50 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:transform-none disabled:shadow-none flex items-center justify-center gap-3"
+              className="w-full h-14 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:shadow-zinc-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              {saving ? 'Saving...' : 'Save Timeline Event'}
+              Save Timeline Event
             </button>
           </div>
         </form>
