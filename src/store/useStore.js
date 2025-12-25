@@ -18,7 +18,7 @@ export const useStore = create(
       ],
 
       // ผู้ใช้ปัจจุบัน
-      currentUser: 'Mekin S.', // Default value (ควรเปลี่ยนเป็น null ใน Production)
+      currentUser: null, // เปลี่ยนเป็น null เพื่อให้ระบบวิ่งไปหน้า Login ทุกครั้งที่เปิดเว็บใหม่
       setCurrentUser: (name) => set({ currentUser: name }),
 
       // Action สำหรับ Logout

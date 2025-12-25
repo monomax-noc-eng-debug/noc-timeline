@@ -12,6 +12,7 @@ const ShiftHandoverPage = lazy(() => import('./pages/ShiftHandoverPage'));
 const TicketLogPage = lazy(() => import('./pages/TicketLogPage'));
 const TodayPage = lazy(() => import('./pages/schedule/TodayPage'));
 const HistoryPage = lazy(() => import('./pages/schedule/HistoryPage'));
+const DocsPage = lazy(() => import('./pages/DocsPage'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -74,6 +75,9 @@ export default function App() {
 
                     {/* ระบบส่งเวร (Handover) */}
                     <Route path="/handover" element={<ShiftHandoverPage />} />
+
+                    {/* คู่มือการใช้งาน (Documentation) */}
+                    <Route path="/docs" element={<DocsPage />} />
 
                     {/* กรณีพิมพ์ URL มั่ว ให้ดีดกลับหน้าหลัก */}
                     <Route path="*" element={<Navigate to="/" replace />} />

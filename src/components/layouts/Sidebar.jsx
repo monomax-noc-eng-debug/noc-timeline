@@ -3,7 +3,7 @@ import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Activity, Calendar, AlertTriangle, FileText, LogOut, Sun, Moon, X,
-  PanelLeftClose, PanelLeftOpen, Archive
+  PanelLeftClose, PanelLeftOpen, Archive, Book
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
@@ -82,6 +82,9 @@ export default function Sidebar({ onCloseMobile, isCollapsed = false, toggleColl
         />
         <NavItem to="/incidents" icon={AlertTriangle} label="Incidents" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
         <NavItem to="/handover" icon={FileText} label="Handover" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+
+        <div className={`mt-6 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>Documentation</div>
+        <NavItem to="/docs" icon={Book} label="User Manual" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
 
       </nav>
 
