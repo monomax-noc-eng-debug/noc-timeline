@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  FileSpreadsheet, Copy, Check, X, Table2, LayoutGrid, Zap, Layers,
+  FileSpreadsheet, Copy, Check, X, LayoutGrid, Zap, Layers,
   DownloadCloud, Loader2
 } from 'lucide-react';
 import { convertToGB, parseAbbrev, formatNumber, formatPercent } from '../../../utils/formatters';
@@ -21,32 +21,86 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
   const [viewMode, setViewMode] = useState('table');
   const [isExporting, setIsExporting] = useState(false);
 
-  // Sync selection when matches change or modal opens
+  // Sync selection when matches change
   useEffect(() => {
     if (isOpen && matches?.length > 0) {
-      setSelectedIds(new Set(matches.map(m => m.id)));
+      // รีเซ็ต Selection เมื่อเปิดใหม่ หรือข้อมูลเปลี่ยน
+      setSelectedIds(new Set());
     }
   }, [isOpen, matches]);
 
-  // ✅ 1. คำนวณข้อมูลพร้อม Original No. (เลขลำดับจริง)
+  // 🔥🔥🔥 1. LOGIC ยุบรวมข้อมูลซ้ำ (Deduplicate) ที่นี่ 🔥🔥🔥
   const enrichedData = useMemo(() => {
-    if (!matches) return [];
-    return matches.map((m, originalIndex) => {
+    if (!matches || matches.length === 0) return [];
+
+    const uniqueMap = new Map();
+
+    matches.forEach((m) => {
+      // 1.1 สร้าง Key สำหรับเช็คซ้ำ: "เวลา|ชื่อแมตช์" (ตัดช่องว่าง ทำตัวเล็ก)
+      // ป้องกัน Error กรณีไม่มี field
+      const title = (m.teamA && m.teamB) ? `${m.teamA} vs ${m.teamB}` : (m.title || m.match || "");
+      const cleanTitle = title.toLowerCase().replace(/\s/g, '');
+      const time = m.startTime || m.time || "";
+
+      // Key: เช่น "15:00|lopburicityvsnakhonratchasima"
+      // ถ้าไม่มีชื่อแมตช์ ให้ใช้ ID เดิมไปเลย (กันข้อมูลหาย)
+      const key = cleanTitle ? `${time}|${cleanTitle}` : m.id;
+
+      if (uniqueMap.has(key)) {
+        // --- เจอข้อมูลซ้ำ! ให้ทำการรวม (Merge) ---
+        const existing = uniqueMap.get(key);
+
+        // รวมชื่อช่อง (เช่น "TPL 2" + "TPL 7" -> "TPL 2, TPL 7")
+        const existingChannel = existing.liveChannel || existing.channel || "";
+        const newChannel = m.liveChannel || m.channel || "";
+
+        let mergedChannel = existingChannel;
+        // เช็คก่อนว่ามี Channel นี้อยู่แล้วหรือยัง กันซ้ำใน text
+        if (newChannel && !existingChannel.includes(newChannel)) {
+          mergedChannel = existingChannel ? `${existingChannel}, ${newChannel}` : newChannel;
+        }
+
+        // อัปเดตข้อมูลใน Map
+        uniqueMap.set(key, {
+          ...existing,
+          // รวม ID เผื่ออยากใช้ (แต่ในที่นี้ใช้ ID หลักตัวแรกก็พอ)
+          liveChannel: mergedChannel,
+          channel: mergedChannel, // อัปเดตทั้ง 2 field กันพลาด
+
+          // ถ้าตัวใหม่มีสถิติแต่ตัวเก่าไม่มี ให้เอาตัวใหม่มาทับ
+          startStats: existing.startStats || m.startStats,
+          endStats: existing.endStats || m.endStats,
+
+          // รวม League (เผื่อตัวแรกว่าง)
+          league: existing.league || m.league
+        });
+
+      } else {
+        // --- ไม่ซ้ำ! ใส่ลง Map เป็นรายการใหม่ ---
+        uniqueMap.set(key, { ...m });
+      }
+    });
+
+    // 1.2 แปลงกลับเป็น Array และรันเลข No. ใหม่ (1, 2, 3...)
+    return Array.from(uniqueMap.values()).map((m, index) => {
       const statKey = copyType === 'start_stat' ? 'startStats' : 'endStats';
       const stats = m[statKey] || {};
+
       return {
         ...m,
         ...stats,
-        originalNo: originalIndex + 1, // ✅ Key Fix: เก็บเลขลำดับจริงไว้เสมอ (เช่น 1, 5, 10)
+        originalNo: index + 1, // ✅ รันเลขใหม่ที่นี่! (จะไม่กระโดดข้าม)
         hasStats: !!m[statKey]
       };
     });
+
   }, [matches, copyType]);
 
   // Helpers
   const safeFormatNum = (val) => {
     try {
-      const num = parseAbbrev(val || '0');
+      if (val === undefined || val === null) return "0";
+      const num = parseAbbrev(val);
       return formatNumber(num) || "0";
     } catch (e) { return "0"; }
   };
@@ -60,16 +114,22 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
     } catch (e) { return "0"; }
   };
 
-  // ✅ Format Row โดยใช้ originalNo
+  const safeFormatPercent = (val) => {
+    try {
+      return formatPercent(val, 2) || "0.00 %";
+    } catch (e) { return "0.00 %"; }
+  }
+
+  // Format Row
   const formatMatchRow = (m) => {
     const common = {
-      no: m.originalNo, // ✅ ใช้เลขจริง ไม่ใช่ index วนลูป
+      no: m.originalNo,
       league: m.league || m.calendar || "-",
       title: (m.teamA && m.teamB) ? `${m.teamA} vs ${m.teamB}` : (m.title || m.match || "-"),
-      time: m.startTime || "-",
-      ecsSport: formatPercent(m.ecsSport, 2) || "0.00 %",
-      ecsEnt: formatPercent(m.ecsEntitlement, 2) || "0.00 %",
-      api: formatPercent(m.apiHuawei, 2) || "0.00 %",
+      time: m.startTime || m.time || "-",
+      ecsSport: safeFormatPercent(m.ecsSport),
+      ecsEnt: safeFormatPercent(m.ecsEntitlement),
+      api: safeFormatPercent(m.apiHuawei),
       reqPeak: safeFormatNum(m.requestPeak),
       viewers: safeFormatNum(m.muxViewerUniq),
       score: m.muxScore || "0",
@@ -108,7 +168,7 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
           common.no, common.league, common.title, common.time,
           common.ecsSport, common.ecsEnt, common.api, common.reqPeak,
           m.cdn || "-",
-          m.liveChannel || m.channel || "-",
+          m.liveChannel || m.channel || "-", // ✅ จะโชว์ช่องที่รวมแล้ว (TPL 2, TPL 7)
           safeFormatNum(m.reqPeakMin),
           safeFormatNum(m.reqTotal),
           safeConvertGB(m.bwPeakGbps),
@@ -120,7 +180,7 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
     return rows;
   };
 
-  // Memoized Formatted Rows
+  // ใช้ enrichedData ในการแสดงผล
   const formattedRows = useMemo(() => {
     return enrichedData.flatMap((m) => formatMatchRow(m));
   }, [enrichedData]);
@@ -137,8 +197,9 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === matches?.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(matches.map(m => m.id)));
+    // เลือกทั้งหมดจาก enrichedData (ข้อมูลที่ยุบรวมแล้ว)
+    if (selectedIds.size === enrichedData?.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(enrichedData.map(m => m.id)));
   };
 
   const handleCopy = (copyAll = false) => {
@@ -153,24 +214,22 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
     });
   };
 
-  // ✅ Helper: ดึงข้อมูล (Start/End) เพื่อเตรียมส่งออก โดยยังคงเลข originalNo ไว้
+  // ✅ Helper: ใช้ enrichedData ในการ Export เพื่อให้ข้อมูลตรงกับหน้าเว็บ
   const getRowsForType = (type) => {
     const statKey = type === 'start_stat' ? 'startStats' : 'endStats';
 
-    // 1. จำลองข้อมูล (Start/End) + ใส่ originalNo (จาก enrichedData logic เดิม)
-    const tempEnriched = matches.map((m, idx) => ({
+    // ใช้ enrichedData เป็นฐาน (ข้อมูลไม่ซ้ำ)
+    const tempEnriched = enrichedData.map((m) => ({
       ...m,
       ...(m[statKey] || {}),
-      originalNo: idx + 1, // ✅ ใช้ลำดับจริง
+      // originalNo มีอยู่แล้วจากการทำ enrichedData ข้างบน
       hasStats: !!m[statKey]
     }));
 
-    // 2. Filter เฉพาะตัวที่เลือก
     const targetMatches = selectedIds.size > 0
       ? tempEnriched.filter(m => selectedIds.has(m.id))
       : tempEnriched;
 
-    // 3. Format Cells
     return targetMatches.flatMap((m) => {
       const rows = formatMatchRow(m);
       return rows.map(r => r.cells);
@@ -178,7 +237,6 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
   };
 
   const handleExport = async (exportMode = 'all') => {
-    // ถ้ามีการเลือก ให้ส่งเฉพาะที่เลือก ถ้าไม่เลือกเลยให้ส่งทั้งหมด
     const targetRows = selectedIds.size > 0 ? selectedRows : formattedRows;
 
     if (targetRows.length === 0) {
@@ -193,7 +251,6 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
       let startRows = [];
       let endRows = [];
 
-      // เตรียมข้อมูลตามโหมดที่เลือก
       if (exportMode === 'all' || exportMode === 'start') {
         startRows = getRowsForType('start_stat');
       }
@@ -201,7 +258,6 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
         endRows = getRowsForType('end_stat');
       }
 
-      // ส่งไปยัง Google Apps Script
       await googleSheetService.exportCombinedMatches(
         dateStr,
         DATA_HEADERS,
@@ -212,7 +268,7 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
       const modeText = exportMode === 'all' ? 'All' : (exportMode === 'start' ? 'Start' : 'End');
       toast({
         title: "Export Success!",
-        description: `Sent ${modeText} stats for ${selectedIds.size > 0 ? selectedIds.size : matches.length} matches.`,
+        description: `Sent ${modeText} stats for ${selectedIds.size > 0 ? selectedIds.size : enrichedData.length} matches.`,
         variant: "default",
         className: "bg-emerald-500 text-white border-none"
       });
@@ -243,9 +299,9 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
                   Data <span className="text-violet-500">Preview</span>
                 </h2>
                 <div className="flex items-center gap-1.5 text-[8px] font-black text-zinc-400 uppercase tracking-widest leading-none mt-0.5">
-                  <span className="flex items-center gap-0.5"><Zap size={8} className="text-amber-500" /> {matches?.length || 0}</span>
+                  <span className="flex items-center gap-0.5"><Zap size={8} className="text-amber-500" /> {matches?.length || 0} (Raw)</span>
                   <div className="w-0.5 h-0.5 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                  <span className="flex items-center gap-0.5"><Layers size={8} className="text-blue-500" /> {formattedRows.length}</span>
+                  <span className="flex items-center gap-0.5"><Layers size={8} className="text-blue-500" /> {enrichedData.length} (Merged)</span>
                 </div>
               </div>
             </div>
@@ -274,7 +330,7 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
                         <th className="pl-2 py-1.5 text-left w-6">
                           <button
                             onClick={toggleSelectAll}
-                            className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center transition-all border ${selectedIds.size === matches?.length
+                            className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center transition-all border ${selectedIds.size === enrichedData?.length && enrichedData.length > 0
                               ? 'bg-violet-600 border-violet-600 text-white'
                               : 'bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-600 text-transparent hover:border-violet-400'
                               }`}
@@ -351,8 +407,13 @@ export default function DataPreviewPanel({ matches, isOpen, onClose }) {
 
                         <div className="flex flex-wrap gap-1">
                           <div className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[8px] font-mono font-bold text-zinc-500 border border-zinc-200 dark:border-zinc-700">
-                            {match.startTime || '-'}
+                            {match.startTime || match.time || '-'}
                           </div>
+                          {match.liveChannel && (
+                            <div className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-[8px] font-mono font-bold text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 truncate max-w-[120px]">
+                              {match.liveChannel}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
