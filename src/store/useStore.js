@@ -1,14 +1,11 @@
+// file: src/store/useStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export const useStore = create(
   persist(
     (set) => ({
-      // ------------------------------------------------------------------
       // 1. User & Team Config
-      // ------------------------------------------------------------------
-
-      // รายชื่อทีม NOC (Mock Data)
       nocMembers: [
         { id: 'NOC-1', name: 'Mekin S.', role: 'NOC Lead' },
         { id: 'NOC-2', name: 'Akkapol P.', role: 'NOC Engineer' },
@@ -17,34 +14,56 @@ export const useStore = create(
         { id: 'NOC-5', name: 'Supporter', role: 'Support' }
       ],
 
-      // ผู้ใช้ปัจจุบัน
-      currentUser: null, // เปลี่ยนเป็น null เพื่อให้ระบบวิ่งไปหน้า Login ทุกครั้งที่เปิดเว็บใหม่
-      setCurrentUser: (name) => set({ currentUser: name }),
-
-      // Action สำหรับ Logout
+      currentUser: null,
+      setCurrentUser: (user) => set({ currentUser: user }),
       logout: () => set({ currentUser: null }),
 
-      // ------------------------------------------------------------------
       // 2. UI & Theme
-      // ------------------------------------------------------------------
-
-      // Theme State
       darkMode: false,
       toggleDarkMode: () => set((state) => {
         const newVal = !state.darkMode;
-        // บังคับเปลี่ยน class ที่ html tag ทันทีเพื่อความลื่นไหล
         if (newVal) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
         return { darkMode: newVal };
       }),
 
-      // ------------------------------------------------------------------
-      // หมายเหตุ: ส่วน Data Caching ถูกลบออกแล้ว 
-      // เพื่อให้ React Query จัดการแทนตามวิธีที่ 2
-      // ------------------------------------------------------------------
+      // 3. Ticket Config (Auto Sync)
+      ticketConfig: {
+        autoSync: false,
+        syncTime: '08:00',
+        lastSync: null
+      },
+      setTicketConfig: (config) => set((state) => ({
+        ticketConfig: { ...state.ticketConfig, ...config }
+      })),
     }),
     {
-      name: 'noc-storage', // ชื่อ Key ที่ใช้เก็บใน LocalStorage
+      name: 'noc-storage',
+      version: 3,
+      migrate: (persistedState, version) => {
+        if (version < 1) {
+          if (typeof persistedState.currentUser === 'string') {
+            persistedState.currentUser = {
+              id: 'legacy-user',
+              name: persistedState.currentUser,
+              role: 'NOC Engineer'
+            };
+          }
+        }
+        if (version < 2) {
+          persistedState.ticketConfig = {
+            autoSync: false,
+            syncTime: '08:00',
+            lastSync: null
+          };
+        }
+        // Note: ticketOptions are now stored in Firestore, not localStorage
+        // Remove old ticketOptions from localStorage if exists
+        if (persistedState.ticketOptions) {
+          delete persistedState.ticketOptions;
+        }
+        return persistedState;
+      },
     }
   )
 );

@@ -1,7 +1,6 @@
-// file: src/features/cases/hooks/useIncidents.js
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { incidentService } from '../../../services/incidentService';
-import { useStore } from '../../../store/useStore'; // ✅ 1. Import Store
+import { useStore } from '../../../store/useStore';
 
 /**
  * Custom hook for managing incidents
@@ -17,12 +16,11 @@ export const useIncidents = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All');
 
-  // ✅ 2. ดึงสถานะ User มาเช็ค
+  // ดึงสถานะ User มาเช็ค
   const currentUser = useStore((state) => state.currentUser);
 
   // Real-time subscription
   useEffect(() => {
-    // ✅ 3. ถ้ายังไม่ล็อกอิน ให้หยุดทำงาน (ป้องกัน Error Permission Denied)
     if (!currentUser) {
       setIncidents([]);
       setLoading(false);
@@ -37,7 +35,7 @@ export const useIncidents = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser]); // ✅ 4. เพิ่ม dependency currentUser
+  }, [currentUser]);
 
   // Filtered incidents
   const filteredIncidents = useMemo(() => {
@@ -54,9 +52,8 @@ export const useIncidents = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     }).sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return dateB - dateA;
+      // ✅ แก้ไข: ใช้ตัวแปรที่เตรียมไว้แทนการ new Date() ซ้ำซ้อน (เร็วกว่ามาก)
+      return b._sortTime - a._sortTime;
     });
   }, [incidents, searchTerm, filterStatus, filterType]);
 

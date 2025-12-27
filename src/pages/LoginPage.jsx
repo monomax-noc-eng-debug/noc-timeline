@@ -8,8 +8,15 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { nocMembers, setCurrentUser } = useStore();
 
-  const handleLogin = (name) => {
-    setCurrentUser(name);
+  // ✅ แก้ไข: รับ parameter เป็น member object และไม่ต้องใช้ e.preventDefault()
+  const handleLogin = (member) => {
+    // ส่งทั้ง Object (id, name, role) ไปเก็บใน Store
+    setCurrentUser({
+      id: member.id,
+      name: member.name,
+      role: member.role || 'NOC Engineer'
+    });
+
     navigate('/');
   };
 
@@ -19,7 +26,6 @@ export default function LoginPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          {/* ✅ แก้ไขชื่อเว็บ */}
           <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase dark:text-white mb-4">
             NOCNTT <span className="text-zinc-300 dark:text-zinc-700">Management</span>
           </h1>
@@ -36,7 +42,8 @@ export default function LoginPage() {
           {nocMembers.map((member) => (
             <button
               key={member.id}
-              onClick={() => handleLogin(member.name)}
+              // ✅ แก้ไข: ส่ง member object ทั้งก้อนเข้าไป
+              onClick={() => handleLogin(member)}
               className="group flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-2"
             >
               {/* Avatar Circle */}

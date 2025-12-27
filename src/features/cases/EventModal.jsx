@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ImagePlus, Trash2, Save, Loader2, Clock, Calendar, FileText, ChevronRight, AlertCircle, Link as LinkIcon, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { getDirectImageUrl } from '../../utils/helpers';
 import ImageUploader from '../../components/forms/ImageUploader';
+import ConfirmModal from '../../components/ui/ConfirmModal';
+import ImagePreviewModal from '../../components/ui/ImagePreviewModal';
+import AlertModal from '../../components/ui/AlertModal';
 import { uploadLocalFileToDrive } from '../../utils/driveUpload'; // ฟังก์ชันอัปโหลดที่เราสร้างไว้
 
 export default function EventModal({ isOpen, onClose, onSubmit, initialData, saving = false }) {
@@ -9,7 +12,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
   const [tempImageUrl, setTempImageUrl] = useState('');
   const [uploadMode, setUploadMode] = useState('link'); // 'link' หรือ 'upload'
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, index: null });
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -53,26 +60,51 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
     if (!file) return;
 
     setIsUploadingLocal(true);
+    setUploadProgress(0);
+
+    // Simulate progress
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 95) {
+          clearInterval(interval);
+          return 95;
+        }
+        return prev + Math.random() * 10;
+      });
+    }, 200);
+
     try {
       const res = await uploadLocalFileToDrive(file);
       if (res.result === "success") {
-        handleAddImage(res.url);
+        setUploadProgress(100);
+        setTimeout(() => handleAddImage(res.url), 200);
       } else {
-        alert("Upload failed: " + res.error);
+        setErrorModal({ isOpen: true, message: res.error || "Upload failed. Please check your connection." });
       }
     } catch (err) {
-      alert("Error: " + err.message);
+      setErrorModal({ isOpen: true, message: err.message || "An unexpected error occurred during upload." });
     } finally {
-      setIsUploadingLocal(false);
+      clearInterval(interval);
+      setTimeout(() => {
+        setIsUploadingLocal(false);
+        setUploadProgress(0);
+      }, 500);
       e.target.value = ''; // Reset input
     }
   };
 
   const handleRemoveImageUrl = (indexToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, index) => index !== indexToRemove)
-    }));
+    setDeleteConfirm({ isOpen: true, index: indexToRemove });
+  };
+
+  const confirmRemoveImageUrl = () => {
+    if (deleteConfirm.index !== null) {
+      setFormData(prev => ({
+        ...prev,
+        imageUrls: prev.imageUrls.filter((_, index) => index !== deleteConfirm.index)
+      }));
+    }
+    setDeleteConfirm({ isOpen: false, index: null });
   };
 
   const validate = () => {
@@ -205,9 +237,22 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
                     <div className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all cursor-pointer relative overflow-hidden" onClick={() => !isUploadingLocal && fileInputRef.current.click()}>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLocalUpload} />
                       {isUploadingLocal ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <Loader2 size={24} className="animate-spin text-blue-500" />
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase">Uploading...</span>
+                        <div className="w-full px-8 flex flex-col gap-2">
+                          <div className="flex justify-between items-center px-1">
+                            <div className="flex items-center gap-2 text-blue-500">
+                              <Loader2 size={12} className="animate-spin" />
+                              <span className="text-[10px] font-black uppercase tracking-wider">Syncing to Drive...</span>
+                            </div>
+                            <span className="text-[10px] font-black text-blue-500">{Math.round(uploadProgress)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200/50 dark:border-zinc-700/50">
+                            <div
+                              className="h-full bg-blue-500 transition-all duration-300 ease-out relative"
+                              style={{ width: `${uploadProgress}%` }}
+                            >
+                              <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                            </div>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center gap-2">
@@ -222,17 +267,25 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
 
               {/* Gallery Grid */}
               {formData.imageUrls.length > 0 && (
-                <div className="grid grid-cols-4 gap-2 px-1">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 px-1">
                   {formData.imageUrls.map((url, index) => (
                     <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <img
                         src={getDirectImageUrl(url)}
                         alt="attachment"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-500"
+                        onClick={() => setPreviewUrl(url)}
                         onError={(e) => { e.target.src = 'https://placehold.co/400?text=Image+Not+Found'; }}
                       />
-                      <button type="button" onClick={() => handleRemoveImageUrl(index)} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                        <Trash2 size={16} />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImageUrl(index);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                      >
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   ))}
@@ -254,6 +307,28 @@ export default function EventModal({ isOpen, onClose, onSubmit, initialData, sav
             </button>
           </div>
         </form>
+        <ConfirmModal
+          isOpen={deleteConfirm.isOpen}
+          onClose={() => setDeleteConfirm({ isOpen: false, index: null })}
+          title="Delete Image?"
+          message="Are you sure you want to remove this image from the gallery?"
+          onConfirm={confirmRemoveImageUrl}
+          isDanger={true}
+        />
+        <ImagePreviewModal
+          isOpen={!!previewUrl}
+          onClose={() => setPreviewUrl(null)}
+          imageUrl={previewUrl}
+          allImages={formData.imageUrls}
+          initialIndex={formData.imageUrls.indexOf(previewUrl)}
+        />
+        <AlertModal
+          isOpen={errorModal.isOpen}
+          onClose={() => setErrorModal({ isOpen: false, message: '' })}
+          title="Upload Error"
+          message={errorModal.message}
+          type="error"
+        />
       </div>
     </div>
   );

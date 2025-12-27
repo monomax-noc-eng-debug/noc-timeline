@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, FolderKanban, Tag, Hash, User, AlertCircle, FileText, Activity } from 'lucide-react';
+import { useTicketOptions } from '../../../hooks/useTicketOptions';
 
 export default function IncidentFormModal({ isOpen, onClose, incident, onUpdate }) {
+  // Get ticket options from Firestore
+  const { ticketOptions } = useTicketOptions();
+
   const [formData, setFormData] = useState({
     project: '',
     type: 'Incident',
@@ -30,6 +34,13 @@ export default function IncidentFormModal({ isOpen, onClose, incident, onUpdate 
     e.preventDefault();
     onUpdate(formData);
     onClose();
+  };
+
+  // Helper เพื่อดึงชื่อ Reporter อย่างปลอดภัย
+  const getReporterName = () => {
+    if (!incident.createdBy) return 'Unknown';
+    // ถ้าเป็น Object ให้ดึง .name ถ้าเป็น String ให้ใช้เลย
+    return typeof incident.createdBy === 'object' ? incident.createdBy.name : incident.createdBy;
   };
 
   const labelClasses = "block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-2";
@@ -70,7 +81,7 @@ export default function IncidentFormModal({ isOpen, onClose, incident, onUpdate 
               />
             </div>
 
-            {/* Type */}
+            {/* Type - Now using ticketOptions */}
             <div>
               <label className={labelClasses}><Tag size={12} /> Type</label>
               <select
@@ -78,9 +89,9 @@ export default function IncidentFormModal({ isOpen, onClose, incident, onUpdate 
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
-                <option value="Incident">Incident</option>
-                <option value="Request">Request</option>
-                <option value="Maintenance">Maintenance</option>
+                {(ticketOptions.types || ['Incident', 'Request', 'Maintenance']).map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
               </select>
             </div>
 
@@ -96,13 +107,13 @@ export default function IncidentFormModal({ isOpen, onClose, incident, onUpdate 
               />
             </div>
 
-            {/* Reporter (Read Only for now) */}
+            {/* Reporter (Read Only) */}
             <div>
               <label className={labelClasses}><User size={12} /> Reporter</label>
               <input
                 type="text"
                 className={`${inputClasses} opacity-50 cursor-not-allowed`}
-                value={incident.createdBy || 'Unknown'}
+                value={getReporterName()}
                 readOnly
               />
             </div>

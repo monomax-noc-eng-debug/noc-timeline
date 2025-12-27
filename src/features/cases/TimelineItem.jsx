@@ -1,14 +1,17 @@
 import React from 'react';
-import { Pencil, Trash2, ChevronUp, ChevronDown, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Pencil, Trash2, ChevronUp, ChevronDown, ExternalLink, Image as ImageIcon, ZoomIn } from 'lucide-react';
 import { getDirectImageUrl } from '../../utils/helpers';
+import ImagePreviewModal from '../../components/ui/ImagePreviewModal';
 
 /**
  * TimelineItem - Individual event in the incident timeline
+ * Click on event card to view/edit details
  */
 export default function TimelineItem({
   event, index, isLastItem, showDateHeader, dateLabel,
   onMove, onEdit, onDelete
 }) {
+  const [previewData, setPreviewData] = React.useState({ isOpen: false, url: null, index: 0 });
   // Handle multiple image formats
   let displayImages = (event.imageUrls || []).filter(u => u && typeof u === 'string');
   if (!displayImages.length && event.image && typeof event.image === 'string') displayImages = [event.image];
@@ -16,6 +19,13 @@ export default function TimelineItem({
 
   const hasDescription = event.desc && event.desc.trim().length > 0;
   const hasImages = displayImages.length > 0;
+
+  // Handle card click to open edit modal
+  const handleCardClick = (e) => {
+    // Prevent if clicking on buttons or images
+    if (e.target.closest('button') || e.target.closest('.image-container')) return;
+    onEdit(event);
+  };
 
   return (
     <div className="relative flex items-start gap-3 md:gap-4 mb-4 z-10 group/item animate-in fade-in slide-in-from-left-2 duration-300">
@@ -55,19 +65,22 @@ export default function TimelineItem({
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#0a0a0a] p-2.5 md:p-3 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex gap-2 relative hover:border-zinc-300 dark:hover:border-zinc-600 transition-all group-hover/item:shadow-md">
+        <div
+          onClick={handleCardClick}
+          className="bg-white dark:bg-[#0a0a0a] p-2.5 md:p-3 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm flex gap-2 relative hover:border-zinc-300 dark:hover:border-zinc-600 transition-all group-hover/item:shadow-md cursor-pointer"
+        >
 
           {/* Reorder Buttons (Micro) */}
           <div className="flex flex-col gap-0.5 justify-center border-r pr-1.5 border-gray-100 dark:border-zinc-900 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity">
             <button
-              onClick={() => onMove(index, 'up')}
+              onClick={(e) => { e.stopPropagation(); onMove(index, 'up'); }}
               disabled={index === 0}
               className="p-0.5 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-10 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
             >
               <ChevronUp size={12} />
             </button>
             <button
-              onClick={() => onMove(index, 'down')}
+              onClick={(e) => { e.stopPropagation(); onMove(index, 'down'); }}
               disabled={isLastItem}
               className="p-0.5 text-gray-300 hover:text-black dark:hover:text-white disabled:opacity-10 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded transition-colors"
             >
@@ -80,14 +93,16 @@ export default function TimelineItem({
             {/* Actions (Absolute Top Right - Tiny) */}
             <div className="absolute top-0 right-0 flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity">
               <button
-                onClick={() => onEdit(event)}
+                onClick={(e) => { e.stopPropagation(); onEdit(event); }}
                 className="p-1 text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded transition-colors"
+                title="Edit"
               >
                 <Pencil size={10} />
               </button>
               <button
-                onClick={() => onDelete(event.id)}
+                onClick={(e) => { e.stopPropagation(); onDelete(event.id); }}
                 className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded transition-colors"
+                title="Delete"
               >
                 <Trash2 size={10} />
               </button>
@@ -100,7 +115,7 @@ export default function TimelineItem({
 
             {/* Image Grid (Smaller) */}
             {hasImages && (
-              <div className={`grid gap-1.5 mt-2.5 ${displayImages.length === 1
+              <div className={`image-container grid gap-1.5 mt-2.5 ${displayImages.length === 1
                 ? 'grid-cols-1 max-w-[150px]'
                 : displayImages.length === 2
                   ? 'grid-cols-2 max-w-[300px]'
@@ -118,9 +133,12 @@ export default function TimelineItem({
                         e.target.src = 'https://placehold.co/400?text=Image+Load+Failed';
                       }}
                     />
-                    <a href={url} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
-                      <ExternalLink size={14} className="text-white" />
-                    </a>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); setPreviewData({ isOpen: true, url: url, index: imgIndex }); }}
+                      className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center opacity-0 hover:opacity-100 cursor-zoom-in"
+                    >
+                      <ZoomIn size={14} className="text-white" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -128,6 +146,14 @@ export default function TimelineItem({
           </div>
         </div>
       </div>
+
+      <ImagePreviewModal
+        isOpen={previewData.isOpen}
+        onClose={() => setPreviewData(prev => ({ ...prev, isOpen: false }))}
+        imageUrl={previewData.url}
+        allImages={displayImages}
+        initialIndex={previewData.index}
+      />
     </div>
   );
 }

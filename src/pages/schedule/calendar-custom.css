@@ -1,5 +1,37 @@
 /* FullCalendar Override for Minimal Black/White Theme */
 
+/* ✅ Fix: Prevent columns from being cut off */
+.fc {
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.fc-scrollgrid {
+  overflow: visible !important;
+}
+
+.fc-scrollgrid-section,
+.fc-scrollgrid-section>td {
+  overflow: visible !important;
+}
+
+.fc-daygrid-body {
+  width: 100% !important;
+}
+
+.fc-scrollgrid-sync-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.fc-col-header {
+  width: 100% !important;
+}
+
+.fc-col-header-cell {
+  width: calc(100% / 7) !important;
+}
+
 /* Header & Text */
 .fc-col-header-cell-cushion {
   text-transform: uppercase;
@@ -7,7 +39,8 @@
   font-weight: 900;
   letter-spacing: 0.1em;
   padding: 16px 0 !important;
-  color: #71717a; /* zinc-500 */
+  color: #71717a;
+  /* zinc-500 */
   text-decoration: none !important;
 }
 
@@ -22,9 +55,11 @@
 }
 
 .fc-day-today .fc-daygrid-day-number {
-  background-color: #18181b; /* zinc-900 */
+  background-color: #18181b;
+  /* zinc-900 */
   color: white !important;
 }
+
 .dark .fc-day-today .fc-daygrid-day-number {
   background-color: #fff;
   color: black !important;
@@ -42,13 +77,25 @@
 .fc-daygrid-more-link {
   font-size: 10px;
   font-weight: 800;
-  color: #52525b !important; /* zinc-600 */
+  color: #52525b !important;
+  /* zinc-600 */
   text-decoration: none !important;
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
   padding: 2px 6px;
   border-radius: 4px;
 }
+
 .dark .fc-daygrid-more-link {
   color: #a1a1aa !important;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ✅ Fix: Ensure day cells have proper width */
+.fc-daygrid-day {
+  min-width: 0 !important;
+}
+
+.fc-daygrid-day-frame {
+  min-height: 100px;
+  overflow: hidden;
 }

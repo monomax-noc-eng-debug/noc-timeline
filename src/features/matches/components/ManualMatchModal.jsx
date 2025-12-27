@@ -1,25 +1,28 @@
 // src/features/matches/components/ManualMatchModal.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  Loader2, Clock, Trophy, Tv, Shield,
-  Server, Wand2, Sparkles, Calendar as CalendarIcon,
-  CheckCircle2, Swords, X, Hash, Globe, Activity,
-  LayoutGrid, Info, Settings2
+  Loader2, Tv, Wand2, Zap, Clock, Save,
+  Calendar as CalendarIcon, Check, ChevronsUpDown,
+  Globe, Settings2, X
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { configService } from '../../../services/configService';
+import { useStore } from '../../../store/useStore'; // ✅ 1. Import Store
+import { Link } from 'react-router-dom';
 
 // ✅ Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -33,9 +36,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialData, selectedDate, saving }) {
+  const { currentUser } = useStore(); // ✅ 2. ดึง currentUser
+
   const [form, setForm] = useState({
     league: '',
     match: '',
@@ -47,17 +60,14 @@ export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialDat
     cdn: 'AWS',
   });
 
-  const cdnOptions = [
-    { id: 'AWS', label: 'AWS', color: 'bg-orange-500' },
-    { id: 'Tencent', label: 'Tencent', color: 'bg-blue-500' },
-    { id: 'Huawei', label: 'Huawei', color: 'bg-red-500' },
-    { id: 'BytePlus', label: 'BytePlus', color: 'bg-cyan-500' },
-    { id: 'Wangsu', label: 'Wangsu', color: 'bg-indigo-500' },
-    { id: 'Akamai', label: 'Akamai', color: 'bg-blue-600' },
-    { id: 'Multi CDN', label: 'Multi CDN', color: 'bg-purple-600' }
-  ];
+  const [configs, setConfigs] = useState({ leagues: [], channels: [], cdnOptions: [] });
+  const [openChannelBox, setOpenChannelBox] = useState(false);
 
-  // Load Data
+  useEffect(() => {
+    const unsub = configService.subscribeConfigs((data) => setConfigs(data));
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -86,7 +96,6 @@ export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialDat
     }
   }, [isOpen, initialData, selectedDate]);
 
-  // Logic: Smart Input Parser
   const handleMatchNameChange = (val) => {
     let newForm = { ...form, match: val };
     const separators = [' vs ', ' VS ', ' Vs ', ' - ', ' v '];
@@ -104,332 +113,302 @@ export default function ManualMatchModal({ isOpen, onClose, onSubmit, initialDat
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(form);
+
+    // ✅ 3. เตรียมข้อมูล User (รองรับทั้ง Object และ String)
+    const userName = typeof currentUser === 'object' ? currentUser?.name : currentUser;
+    const userToRecord = userName || 'System';
+
+    // เพิ่ม createdBy หรือ updatedBy ตามกรณี
+    const payload = {
+      ...form,
+      ...(initialData
+        ? { updatedBy: userToRecord }
+        : { createdBy: userToRecord }
+      )
+    };
+
+    onSubmit(payload);
   };
 
   const isFormValid = form.teamA && form.teamB && form.startDate && form.startTime;
 
-  // Sub-component for Section Label
-  const SectionLabel = ({ icon: Icon, title, desc }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-        <Icon size={16} />
-      </div>
-      <div>
-        <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">{title}</h4>
-        {desc && <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">{desc}</p>}
-      </div>
-    </div>
+  // --- Components ---
+
+  const FieldLabel = ({ children, icon: Icon }) => (
+    <Label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center gap-1.5">
+      {Icon && <Icon size={12} />}
+      {children}
+    </Label>
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[760px] p-0 gap-0 overflow-hidden bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 shadow-2xl transition-all duration-300">
+      <DialogContent showCloseButton={false} className="sm:max-w-[700px] p-0 gap-0 overflow-hidden bg-white dark:bg-[#09090b] border-zinc-200 dark:border-zinc-800 shadow-2xl block">
 
-        {/* PROGRESSIVE HEADER */}
-        <DialogHeader className="px-8 py-6 border-b border-zinc-100 dark:border-zinc-800/50 bg-gradient-to-r from-white via-white to-zinc-50/50 dark:from-[#09090b] dark:via-[#09090b] dark:to-zinc-900/10 relative">
-          <div className="flex items-center justify-between relative z-10 w-full">
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "p-3 rounded-2xl shadow-sm transition-all duration-500",
-                initialData
-                  ? "bg-emerald-500 text-white shadow-emerald-500/20"
-                  : "bg-black text-white dark:bg-white dark:text-black shadow-zinc-500/20"
-              )}>
-                {initialData ? <CheckCircle2 size={24} /> : <Activity size={24} />}
+        <form id="match-form" onSubmit={handleSubmit}>
+          {/* HEADER SECTION */}
+          <div className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800 p-6 pb-10 relative overflow-hidden">
+            {/* Background Decoration */}
+
+            <DialogHeader className="mb-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+                    {initialData ? 'Edit Match Details' : 'Create New Match'}
+                    {initialData && <Badge variant="secondary" className="px-2 py-0 h-4 text-[9px] uppercase font-black">Updating</Badge>}
+                  </DialogTitle>
+
+                </div>
+                <DialogClose asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                    <X size={16} />
+                  </Button>
+                </DialogClose>
               </div>
-              <div>
-                <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
-                  {initialData ? 'Update Match Event' : 'Schedule New Event'}
-                  {!initialData && <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black tracking-widest uppercase">Manual</span>}
-                </DialogTitle>
-                <DialogDescription className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Configure real-time monitoring and broadcast distribution.
-                </DialogDescription>
+            </DialogHeader>
+
+            {/* TOP CONTROLS: Magic Parser & League */}
+            <div className="flex flex-col md:flex-row items-center gap-2 relative z-10">
+              {/* League Select */}
+              <div className="w-full md:w-[140px] shrink-0">
+                <Select value={form.league} onValueChange={(val) => setForm({ ...form, league: val })}>
+                  <SelectTrigger className="bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 h-10 shadow-sm text-[11px] font-bold">
+                    <SelectValue placeholder="League" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {configs.leagues.map(league => (
+                      <SelectItem key={league} value={league} className="text-xs">{league}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-[10px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest">NOC DASHBOARD</span>
-              <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter flex items-center gap-1.5 mt-1">
-                <LayoutGrid size={12} /> CONFIG V2.4
-              </span>
+
+              {/* Smart Parser Input */}
+              <div className="flex-1 w-full relative group">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Zap size={14} className="text-indigo-500 fill-indigo-500/20" />
+                </div>
+                <Input
+                  placeholder="Paste details to auto-fill..."
+                  value={form.match}
+                  onChange={(e) => handleMatchNameChange(e.target.value)}
+                  className="pl-9 h-10 bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 shadow-sm focus-visible:ring-indigo-500 text-xs font-medium"
+                />
+              </div>
             </div>
           </div>
-        </DialogHeader>
 
-        {/* RESTRUCTURED SCROLLABLE BODY */}
-        <div className="p-8 max-h-[75vh] overflow-y-auto custom-scrollbar bg-white dark:bg-[#09090b]">
-          <form id="match-form" onSubmit={handleSubmit} className="space-y-10">
+          {/* MAIN BODY */}
+          <div className="p-6 space-y-8">
 
-            {/* SECTION 1: IDENTITY & LEAGUE */}
-            <section>
-              <SectionLabel icon={Info} title="Event Identity" desc="League and Teams Information" />
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                {/* League Selection (Left) */}
-                <div className="md:col-span-4 space-y-2">
-                  <Label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">League</Label>
-                  <Select value={form.league} onValueChange={(val) => setForm({ ...form, league: val })}>
-                    <SelectTrigger className="h-12 text-sm font-bold bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm transition-all focus:ring-2 ring-zinc-500/10">
-                      <div className="flex items-center gap-2">
-                        <Trophy size={16} className="text-amber-500" />
-                        <SelectValue placeholder="Select" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent side="bottom" className="max-h-[250px] border-zinc-200 dark:border-zinc-800">
-                      <SelectItem value="Premier League" className="font-bold">Premier League</SelectItem>
-                      <SelectItem value="EFL" className="font-bold">EFL</SelectItem>
-                      <SelectItem value="Thai League 1" className="font-bold">Thai League 1</SelectItem>
-                      <SelectItem value="Thai League 2" className="font-bold">Thai League 2</SelectItem>
-                      <SelectItem value="Thai League 3" className="font-bold">Thai League 3</SelectItem>
-                      <SelectItem value="French League" className="font-bold">French League</SelectItem>
-                      <SelectItem value="Carabao Cup" className="font-bold">Carabao Cup</SelectItem>
-                      <SelectItem value="UEFA European" className="font-bold">UEFA European</SelectItem>
-                      <SelectItem value="Chang FA Cup" className="font-bold">Chang FA Cup</SelectItem>
-                      <SelectItem value="SV League WM_Volleyball" className="font-bold">SV League WM_Volleyball</SelectItem>
-                      <SelectItem value="SV League M_Volleyball" className="font-bold">SV League M_Volleyball</SelectItem>
-                      <SelectItem value="The Emirates FA Cup" className="font-bold">The Emirates FA Cup</SelectItem>
-                    </SelectContent>
-                  </Select>
+            {/* VERSUS SECTION (Hero) */}
+            <div className="relative -mt-14 bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-5 md:p-6 mx-2">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1 w-full space-y-2">
+                  <Label className="text-[10px] font-black text-zinc-400 text-center block uppercase tracking-widest">Home Team</Label>
+                  <Input
+                    value={form.teamA}
+                    onChange={e => setForm({ ...form, teamA: e.target.value })}
+                    placeholder="Team A"
+                    className="h-10 text-center text-base font-bold bg-zinc-50 dark:bg-zinc-900 border-transparent focus:bg-white dark:focus:bg-black focus:border-indigo-500 transition-all rounded-xl"
+                  />
                 </div>
 
-                {/* Smart Fill Input (Right) */}
-                <div className="md:col-span-8 space-y-2">
-                  <Label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1 flex items-center justify-between">
-                    Smart Fill Parser
-                    <span className="text-amber-500 flex items-center gap-1 normal-case tracking-normal font-bold">
-                      <Sparkles size={10} /> Auto-suggest
-                    </span>
-                  </Label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                      <Wand2 size={18} className="text-zinc-400 group-focus-within:text-blue-500 transition-colors" />
-                    </div>
-                    <Input
-                      placeholder='Search or type "Man City vs Arsenal"...'
-                      className="pl-12 h-12 text-sm font-bold bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm transition-all focus:ring-2 ring-blue-500/10 placeholder:text-zinc-500 dark:placeholder:text-zinc-600"
-                      value={form.match}
-                      onChange={e => handleMatchNameChange(e.target.value)}
-                      autoFocus={!initialData}
-                    />
-                  </div>
+                <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-[10px] border border-zinc-200 dark:border-zinc-700 shadow-sm z-10">
+                  VS
                 </div>
 
-                {/* Matchup Hero Row */}
-                <div className="md:col-span-12 mt-2">
-                  <div className="bg-zinc-50 dark:bg-zinc-900/40 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 shadow-inner relative overflow-hidden group/arena">
-                    <div className="absolute top-0 right-0 p-12 opacity-[0.02] dark:opacity-[0.05] pointer-events-none group-focus-within/arena:opacity-[0.08] transition-opacity">
-                      <Swords size={120} />
-                    </div>
-
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-                      {/* Team A */}
-                      <div className="flex-1 w-full space-y-2">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Shield size={14} className="text-red-500 opacity-50" />
-                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Home</span>
-                        </div>
-                        <Input
-                          placeholder="Search team A..."
-                          className="h-12 text-lg font-black bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-900 dark:text-white placeholder:opacity-30"
-                          value={form.teamA}
-                          onChange={e => setForm({ ...form, teamA: e.target.value })}
-                          required
-                        />
-                      </div>
-
-                      {/* VS Icon */}
-                      <div className="shrink-0 flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center border border-zinc-200 dark:border-zinc-800 shadow-sm z-20">
-                          <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 italic">VS</span>
-                        </div>
-                        <div className="h-px w-20 bg-zinc-200 dark:bg-zinc-800 absolute top-1/2 -translate-y-1/2 md:hidden" />
-                      </div>
-
-                      {/* Team B */}
-                      <div className="flex-1 w-full space-y-2">
-                        <div className="flex items-center gap-2 mb-1 justify-end">
-                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Away</span>
-                          <Shield size={14} className="text-blue-500 opacity-50" />
-                        </div>
-                        <Input
-                          placeholder="Search team B..."
-                          className="h-12 text-lg font-black text-right bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-900 dark:text-white placeholder:opacity-30"
-                          value={form.teamB}
-                          onChange={e => setForm({ ...form, teamB: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex-1 w-full space-y-2">
+                  <Label className="text-[10px] font-black text-zinc-400 text-center block uppercase tracking-widest">Away Team</Label>
+                  <Input
+                    value={form.teamB}
+                    onChange={e => setForm({ ...form, teamB: e.target.value })}
+                    placeholder="Team B"
+                    className="h-10 text-center text-base font-bold bg-zinc-50 dark:bg-zinc-900 border-transparent focus:bg-white dark:focus:bg-black focus:border-red-500 transition-all rounded-xl"
+                  />
                 </div>
               </div>
-            </section>
+            </div>
 
-            {/* SECTION 2: BROADCAST & DISTRIBUTION */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              {/* Broadcast Settings */}
-              <div className="space-y-6">
-                <SectionLabel icon={Settings2} title="Broadcast" desc="Schedule & Channel Settings" />
+            {/* METADATA GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
 
-                <div className="space-y-4">
-                  {/* Date & Time Picker */}
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Kick-off Schedule</Label>
+              {/* Left Column: Schedule */}
+              <div className="space-y-4 p-4 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-800/50">
+                <div className="flex items-center gap-2 pb-2 border-b border-zinc-100/50 dark:border-zinc-800/50">
+                  <Settings2 size={16} className="text-zinc-500" />
+                  <span className="text-sm font-semibold tracking-tight">Schedule & Source</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <FieldLabel icon={CalendarIcon}>Kick-off Date</FieldLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="w-full h-12 justify-between px-4 bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-bold shadow-sm group"
+                          className={cn(
+                            "w-full h-10 justify-start text-[11px] font-bold bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 shadow-sm",
+                            !form.startDate && "text-muted-foreground"
+                          )}
                         >
-                          <div className="flex items-center gap-3">
-                            <CalendarIcon size={16} className="text-blue-500 transition-transform group-hover:scale-110" />
-                            <span className="text-zinc-900 dark:text-zinc-200">
-                              {form.startDate ? format(parseISO(form.startDate), "EEE, d MMMM yyyy") : "Select Date"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 py-0.5 px-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-[11px]">
-                            <Clock size={12} className="text-zinc-400" />
-                            {form.startTime || "--:--"}
-                          </div>
+                          <span className="truncate">
+                            {form.startDate ? format(parseISO(form.startDate), "dd MMM yyyy") : "Pick date"}
+                          </span>
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 border-zinc-200 dark:border-zinc-800 shadow-2xl" align="start">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={form.startDate ? parseISO(form.startDate) : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              const yyyy = date.getFullYear();
-                              const mm = String(date.getMonth() + 1).padStart(2, '0');
-                              const dd = String(date.getDate()).padStart(2, '0');
-                              setForm({ ...form, startDate: `${yyyy}-${mm}-${dd}` });
-                            }
-                          }}
+                          onSelect={(date) => date && setForm({ ...form, startDate: format(date, 'yyyy-MM-dd') })}
+                          initialFocus
                         />
-                        <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-blue-500" />
-                            <span className="text-xs font-black uppercase text-zinc-400">Set Time</span>
-                          </div>
-                          <Input
-                            type="time"
-                            className="w-28 h-9 text-sm font-bold bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                            value={form.startTime}
-                            onChange={e => setForm({ ...form, startTime: e.target.value })}
-                          />
-                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
 
-                  {/* Channel Search */}
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Master Channel</Label>
-                    <div className="relative group/input">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within/input:text-purple-500 transition-colors pointer-events-none">
-                        <Tv size={18} />
-                      </div>
-                      <Input
-                        placeholder="e.g. Sport-T 101"
-                        className="pl-12 h-12 text-sm font-bold bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm transition-all focus:ring-2 ring-purple-500/10"
-                        value={form.channel}
-                        onChange={e => setForm({ ...form, channel: e.target.value })}
-                      />
-
-                      <div className="hidden group-focus-within/input:block absolute bottom-full left-0 right-0 mb-2 max-h-40 overflow-y-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl z-50 p-1">
-                        {[...Array.from({ length: 24 }, (_, i) => `Sport ${i + 1}`), 'Thaileague', 'Sport-T 101', 'Sport-T 102']
-                          .filter(opt => opt.toLowerCase().includes((form.channel || '').toLowerCase()))
-                          .map(opt => (
-                            <div key={opt} onMouseDown={() => setForm({ ...form, channel: opt })} className="px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg cursor-pointer text-xs font-black text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center gap-2">
-                              <Hash size={12} className="opacity-30" />
-                              {opt}
-                            </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel icon={Clock}>Kick-off Time</FieldLabel>
+                    <div className="flex items-center gap-1">
+                      <Select
+                        value={form.startTime?.split(':')[0] || "00"}
+                        onValueChange={(h) => setForm({ ...form, startTime: `${h}:${form.startTime?.split(':')[1] || '00'}` })}
+                      >
+                        <SelectTrigger className="h-10 text-[11px] font-bold bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 shadow-sm"><SelectValue placeholder="HH" /></SelectTrigger>
+                        <SelectContent position="popper" className="h-48">
+                          {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map(v => (
+                            <SelectItem key={v} value={v}>{v}</SelectItem>
                           ))}
-                      </div>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-zinc-400 font-bold">:</span>
+                      <Select
+                        value={form.startTime?.split(':')[1] || "00"}
+                        onValueChange={(m) => setForm({ ...form, startTime: `${form.startTime?.split(':')[0] || '00'}:${m}` })}
+                      >
+                        <SelectTrigger className="h-10 text-[11px] font-bold bg-white dark:bg-black border-zinc-200 dark:border-zinc-800 shadow-sm"><SelectValue placeholder="MM" /></SelectTrigger>
+                        <SelectContent position="popper" className="h-48">
+                          {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(v => (
+                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* CDN Distribution Settings */}
-              <div className="space-y-6">
-                <SectionLabel icon={Globe} title="Distribution" desc="Global CDN Selection" />
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    {cdnOptions.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setForm({ ...form, cdn: opt.id })}
-                        className={cn(
-                          "flex items-center gap-3 px-4 h-12 rounded-xl border text-xs font-black transition-all group/cdn relative overflow-hidden",
-                          form.cdn === opt.id
-                            ? "bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white text-white dark:text-black shadow-lg"
-                            : "bg-white dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-600"
-                        )}
+                <div className="space-y-1">
+                  <FieldLabel icon={Tv}>Channel Source</FieldLabel>
+                  <Popover open={openChannelBox} onOpenChange={setOpenChannelBox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openChannelBox}
+                        className="w-full justify-between h-10 text-xs"
                       >
-                        {/* Selected Indicator Dot */}
-                        <div className={cn(
-                          "shrink-0 w-2 h-2 rounded-full transition-all",
-                          form.cdn === opt.id ? opt.color : "bg-zinc-200 dark:bg-zinc-800 group-hover/cdn:scale-150"
-                        )} />
-                        <span className="truncate">{opt.label}</span>
-
-                        {/* Subtle background color on selection */}
-                        {form.cdn === opt.id && (
-                          <div className={cn("absolute inset-0 opacity-[0.05] pointer-events-none", opt.color)} />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                        {form.channel ? form.channel : "Select channel source..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search channel..." />
+                        <CommandList>
+                          <CommandEmpty>No channel found.</CommandEmpty>
+                          <CommandGroup>
+                            {configs.channels.map((channel) => (
+                              <CommandItem
+                                key={channel}
+                                value={channel}
+                                onSelect={(currentValue) => {
+                                  setForm({ ...form, channel: currentValue === form.channel ? "" : currentValue });
+                                  setOpenChannelBox(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", form.channel === channel ? "opacity-100" : "opacity-0")} />
+                                {channel}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-            </section>
 
-          </form>
-        </div>
+              {/* Right Column: Distribution */}
+              <div className="space-y-4 p-4 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-800/50">
+                <div className="flex items-center gap-2 pb-2 border-b border-zinc-100/50 dark:border-zinc-800/50">
+                  <Globe size={16} className="text-zinc-500" />
+                  <span className="text-sm font-semibold tracking-tight">Distribution (CDN)</span>
+                </div>
 
-        {/* REFINED FOOTER */}
-        <DialogFooter className="px-8 py-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-[#09090b] flex items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="h-12 px-6 font-bold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95"
-          >
-            Cancel
-          </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  {configs.cdnOptions.map((opt) => (
+                    <div
+                      key={opt.id}
+                      onClick={() => setForm({ ...form, cdn: opt.id })}
+                      className={cn(
+                        "cursor-pointer rounded-lg border p-3 flex flex-col gap-2 transition-all hover:border-zinc-400",
+                        form.cdn === opt.id
+                          ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm"
+                          : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className={cn("w-2 h-2 rounded-full", opt.color || "bg-zinc-400")} />
+                        {form.cdn === opt.id && <Check size={12} className="text-zinc-900 dark:text-zinc-100" />}
+                      </div>
+                      <span className="text-xs font-bold truncate">{opt.label}</span>
+                    </div>
+                  ))}
 
-          <div className="flex items-center gap-3">
+                  <Link
+                    to="/settings/config"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-2 text-zinc-400 hover:text-indigo-500 hover:border-indigo-500 hover:bg-indigo-50/50 transition-colors"
+                  >
+                    <Settings2 size={14} />
+                    <span className="text-[10px] font-bold uppercase">Manage</span>
+                  </Link>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <DialogFooter className="px-6 py-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+              className="h-10"
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
-              form="match-form"
               disabled={saving || !isFormValid}
               className={cn(
-                "h-12 px-10 font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-[0.97] relative group overflow-hidden",
-                initialData
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-                  : "bg-black dark:bg-white text-white dark:text-black hover:opacity-90 shadow-zinc-500/20"
+                "h-10 min-w-[140px] font-bold transition-all",
+                initialData ? "bg-emerald-600 hover:bg-emerald-700" : ""
               )}
             >
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : initialData ? (
-                <CheckCircle2 size={16} className="mr-2" />
+                <Check className="mr-2 h-4 w-4" />
               ) : (
-                <Sparkles size={16} className="mr-2" />
+                <Save className="mr-2 h-4 w-4" />
               )}
-              {saving ? 'Processing...' : initialData ? 'Update & Sync Match' : 'Deploy Match Event'}
-
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-[30deg] -translate-x-full group-hover:animate-[shine_1.5s_ease-in-out_infinite]" />
+              {saving ? 'Processing...' : initialData ? 'Update Match' : 'Create Match'}
             </Button>
-          </div>
-        </DialogFooter>
-
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -1,60 +1,56 @@
 // file: src/features/cases/hooks/useEvents.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { incidentService } from '../../../services/incidentService';
-import { useStore } from '../../../store/useStore'; // ✅ 1. Import Store
+import { useStore } from '../../../store/useStore';
 
-/**
- * Custom hook for managing timeline events of an incident
- * Provides real-time data and loading state
- */
 export const useEvents = (incidentId) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ✅ 2. ดึง User มาเช็ค
   const currentUser = useStore((state) => state.currentUser);
 
   useEffect(() => {
-    // ✅ 3. ถ้าไม่มี User หรือ IncidentId ให้หยุดทำงาน
     if (!currentUser || !incidentId) {
       setEvents([]);
-      setError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     const unsubscribe = incidentService.subscribeEvents(incidentId, (data) => {
-      setEvents(data);
+      // ✅ 1. Pre-calculate timestamp for sorting
+      const processedData = data.map(ev => ({
+        ...ev,
+        // สร้าง _sortTime ไว้เลยจะได้ไม่ต้อง new Date() ตอน sort บ่อยๆ
+        _sortTime: new Date(`${ev.date || '1970-01-01'}T${ev.time || '00:00'}`).getTime()
+      }));
+      setEvents(processedData);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [incidentId, currentUser]); // ✅ 4. เพิ่ม currentUser ใน dependency
+  }, [incidentId, currentUser]);
 
-  // Get sorted events
-  const sortedEvents = [...events].sort((a, b) => {
-    const dateA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`).getTime();
-    const dateB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`).getTime();
+  // ✅ 2. Use Memoized sorted events using pre-calculated timestamp
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      if (a._sortTime !== b._sortTime) {
+        return b._sortTime - a._sortTime; // Latest First
+      }
+      return (b.order || 0) - (a.order || 0); // Fallback to order
+    });
+  }, [events]);
 
-    if (dateA !== dateB) return dateB - dateA; // Latest First
-
-    // If same time, use order as fallback (descending)
-    return (b.order || 0) - (a.order || 0);
-  });
-
-  // Get timeline stats
-  const stats = {
+  const stats = useMemo(() => ({
     total: events.length,
     withImages: events.filter(e => e.imageUrls && e.imageUrls.length > 0).length,
-    dateRange: events.length > 0 ? {
-      start: sortedEvents[0]?.date,
-      end: sortedEvents[sortedEvents.length - 1]?.date
+    dateRange: sortedEvents.length > 0 ? {
+      start: sortedEvents[sortedEvents.length - 1]?.date,
+      end: sortedEvents[0]?.date
     } : null
-  };
+  }), [events, sortedEvents]);
 
   return {
     events,

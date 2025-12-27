@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Clock, User, Check, Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { Sun, Moon, Check, Pencil, Trash2, AlertCircle } from 'lucide-react';
 
 /**
  * ShiftLogItem - Individual log entry in the handover list
@@ -113,7 +113,10 @@ export default function ShiftLogItem({
           <div className="flex md:grid md:grid-cols-2 gap-1.5">
             {nocMembers.map((member, i) => {
               const isAck = (log.acknowledgedBy || []).includes(member.name);
-              const isMe = currentUser === member.name;
+
+              // ✅ แก้ไข: เพิ่มการเช็คเพื่อความปลอดภัย (รองรับทั้ง Object และ String)
+              const currentName = typeof currentUser === 'object' ? currentUser?.name : currentUser;
+              const isMe = currentName === member.name;
 
               return (
                 <div

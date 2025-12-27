@@ -4,6 +4,7 @@ import {
   CheckCircle2, Clock, PlayCircle, XCircle,
   AlertTriangle, Minus, Trash2, Settings, Zap
 } from 'lucide-react';
+import { useTicketOptions } from '../../../../hooks/useTicketOptions';
 
 export default function TicketHeader({
   incident = {},
@@ -13,6 +14,9 @@ export default function TicketHeader({
   onEdit = () => { },
   onGenerateReport = () => { }
 }) {
+  // Get ticket options from Firestore
+  const { ticketOptions } = useTicketOptions();
+
   // ตรวจสอบเงื่อนไข Auto Format (INC-PROJ | Type | Subject)
   const isAutoFormat = incident.subject?.includes('|') && incident.subject?.includes('-');
 
@@ -21,7 +25,9 @@ export default function TicketHeader({
     const configs = {
       'Open': { bg: 'bg-red-500/10', text: 'text-red-600', border: 'border-red-500/20', icon: AlertCircle },
       'Pending': { bg: 'bg-amber-500/10', text: 'text-amber-600', border: 'border-amber-500/20', icon: Clock },
+      'In Progress': { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20', icon: PlayCircle },
       'Succeed': { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20', icon: CheckCircle2 },
+      'Resolved': { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20', icon: CheckCircle2 },
       'Closed': { bg: 'bg-zinc-500/10', text: 'text-zinc-500', border: 'border-zinc-500/20', icon: XCircle }
     };
     return configs[s] || { bg: 'bg-zinc-500/10', text: 'text-zinc-500', border: 'border-zinc-500/20', icon: AlertCircle };
@@ -57,7 +63,8 @@ export default function TicketHeader({
           updates.project = idProjectPart[1];
 
           const typeCandidate = parts[1];
-          const validTypes = ['Incident', 'Request', 'Maintenance'];
+          // Use types from ticketOptions
+          const validTypes = ticketOptions.types || ['Incident', 'Request', 'Maintenance'];
           updates.type = validTypes.find(t => t.toLowerCase() === typeCandidate.toLowerCase()) || typeCandidate;
 
           if (parts.length >= 3) {
@@ -93,7 +100,7 @@ export default function TicketHeader({
                 onChange={(e) => onUpdate({ status: e.target.value })}
                 className={`bg-transparent font-black uppercase text-[8px] tracking-wider cursor-pointer outline-none border-none p-0 focus:ring-0 ${statusConfig.text}`}
               >
-                {['Open', 'Pending', 'Succeed', 'Closed'].map(s => (
+                {(ticketOptions.statuses || ['Open', 'Pending', 'Succeed', 'Closed']).map(s => (
                   <option key={s} value={s} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">{s}</option>
                 ))}
               </select>
@@ -107,7 +114,7 @@ export default function TicketHeader({
                 onChange={(e) => onUpdate({ priority: e.target.value })}
                 className={`bg-transparent font-black uppercase text-[8px] tracking-wider cursor-pointer outline-none border-none p-0 focus:ring-0 ${priorityConfig.color}`}
               >
-                {['Critical', 'High', 'Medium', 'Low'].map(p => (
+                {(ticketOptions.severities || ['Critical', 'High', 'Medium', 'Low']).map(p => (
                   <option key={p} value={p} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200">{p}</option>
                 ))}
               </select>
@@ -139,8 +146,8 @@ export default function TicketHeader({
             <Zap
               size={12}
               className={`transition-all duration-500 ${isAutoFormat
-                  ? 'text-emerald-500 fill-current animate-pulse'
-                  : 'text-zinc-200 dark:text-zinc-800'
+                ? 'text-emerald-500 fill-current animate-pulse'
+                : 'text-zinc-200 dark:text-zinc-800'
                 }`}
             />
           </div>

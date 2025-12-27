@@ -1,13 +1,13 @@
 // src/features/handover/ShiftHandoverForm.jsx
 import React, { useEffect } from 'react';
-import { X, Save, Clock, FileText, AlertTriangle, CheckCircle2, Sun, Moon, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Save, Clock, FileText, Sun, Moon, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format, parseISO } from 'date-fns'
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from 'date-fns';
 
-// ✅ Import Hook ที่เราสร้างใหม่
+// ✅ Import Hook สำหรับ Form โดยเฉพาะ (ใช้ path ./hooks/...)
 import { useShiftForm } from './hooks/useShiftForm';
 
 export default function ShiftHandoverForm({
@@ -21,7 +21,7 @@ export default function ShiftHandoverForm({
 }) {
   const { nocMembers } = useStore();
 
-  // ✅ เรียกใช้ Logic ทั้งหมดบรรทัดเดียว จบ!
+  // เรียกใช้ Logic Form
   const {
     formData,
     errors,
@@ -31,7 +31,7 @@ export default function ShiftHandoverForm({
     displayMembers
   } = useShiftForm(isOpen, initialData, currentUser, nocMembers, onSubmit);
 
-  // Handle ESC key (UI Logic เก็บไว้ที่นี่ได้ เพราะเกี่ยวกับ DOM events)
+  // Handle ESC key
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -90,7 +90,7 @@ export default function ShiftHandoverForm({
                         const yyyy = date.getFullYear();
                         const mm = String(date.getMonth() + 1).padStart(2, '0');
                         const dd = String(date.getDate()).padStart(2, '0');
-                        setField('date', `${yyyy}-${mm}-${dd}`); // ✅ ใช้ setField
+                        setField('date', `${yyyy}-${mm}-${dd}`);
                       }
                     }}
                     initialFocus
@@ -106,7 +106,7 @@ export default function ShiftHandoverForm({
               <input
                 type="time"
                 value={formData.time}
-                onChange={(e) => setField('time', e.target.value)} // ✅ ใช้ setField
+                onChange={(e) => setField('time', e.target.value)}
                 className={`${inputClass} px-2 text-center ${errors.time ? 'border-red-400' : ''}`}
               />
               {errors.time && <p className={errorClass}>{errors.time}</p>}
@@ -122,7 +122,7 @@ export default function ShiftHandoverForm({
                   <button
                     key={s}
                     type="button"
-                    onClick={() => setField('shift', s)} // ✅ ใช้ setField
+                    onClick={() => setField('shift', s)}
                     className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase transition-all border-2
                       ${formData.shift === s
                         ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-md'
@@ -145,7 +145,7 @@ export default function ShiftHandoverForm({
                     <button
                       key={member.id}
                       type="button"
-                      onClick={() => toggleMember(member.name)} // ✅ ใช้ฟังก์ชันจาก Hook
+                      onClick={() => toggleMember(member.name)}
                       className={`flex flex-col items-center justify-center p-2 w-full rounded-xl border-2 transition-all
                         ${isSelected ? 'bg-zinc-50 dark:bg-zinc-800 border-black dark:border-white opacity-100' : 'bg-white dark:bg-transparent border-zinc-100 opacity-60 hover:opacity-100'}`}
                     >
@@ -165,7 +165,7 @@ export default function ShiftHandoverForm({
             </div>
           </div>
 
-          {/* 3. Status & Note (ตัวอย่างย่อ) */}
+          {/* 3. Status & Note */}
           <div>
             <label className={labelClass}>Shift Status</label>
             <div className="flex gap-3 p-1.5 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-100 dark:border-zinc-800">
@@ -189,6 +189,7 @@ export default function ShiftHandoverForm({
               value={formData.note}
               onChange={(e) => setField('note', e.target.value)}
               className={inputClass}
+              placeholder="Any incidents, pending tasks, or important notes..."
             />
           </div>
 
@@ -197,7 +198,7 @@ export default function ShiftHandoverForm({
         {/* Footer */}
         <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-[#18181b]/50 flex gap-3 shrink-0">
           <button type="button" onClick={onClose} disabled={saving} className="flex-1 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-500 font-black uppercase text-[10px] hover:bg-zinc-100 transition-colors">Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} className="flex-[2] py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl font-black uppercase text-[10px] shadow-lg flex items-center justify-center gap-2">
+          <button onClick={handleSubmit} disabled={saving} className="flex-[2] py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl font-black uppercase text-[10px] shadow-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Log
           </button>
         </div>

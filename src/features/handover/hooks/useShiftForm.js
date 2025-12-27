@@ -1,9 +1,8 @@
 // src/features/handover/hooks/useShiftForm.js
 import { useState, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
 
 export const useShiftForm = (isOpen, initialData, currentUser, nocMembers, onSubmit) => {
-  // 1. Logic สร้างค่าเริ่มต้น (ย้ายมาจากใน Component)
+  // 1. Logic สร้างค่าเริ่มต้น
   const getDefaultState = useCallback(() => {
     const now = new Date();
     const currentHour = now.getHours();
@@ -14,7 +13,8 @@ export const useShiftForm = (isOpen, initialData, currentUser, nocMembers, onSub
       date: now.toISOString().split('T')[0],
       time: currentTime,
       shift: isNight ? 'Night' : 'Morning',
-      onDuty: currentUser ? [currentUser] : [],
+      // ✅ แก้ไข: ดึงเฉพาะชื่อ (.name) จาก Object currentUser
+      onDuty: currentUser?.name ? [currentUser.name] : [],
       status: 'Normal',
       note: '',
       acknowledgedBy: []
@@ -24,7 +24,7 @@ export const useShiftForm = (isOpen, initialData, currentUser, nocMembers, onSub
   const [formData, setFormData] = useState(getDefaultState());
   const [errors, setErrors] = useState({});
 
-  // 2. Logic การ Reset Form เมื่อเปิด Modal หรือข้อมูลเปลี่ยน
+  // 2. Logic การ Reset Form
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -54,7 +54,6 @@ export const useShiftForm = (isOpen, initialData, currentUser, nocMembers, onSub
 
   const setField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error เมื่อพิมพ์ใหม่
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
@@ -78,9 +77,8 @@ export const useShiftForm = (isOpen, initialData, currentUser, nocMembers, onSub
   };
 
   // 4. เตรียมข้อมูล List สมาชิกที่จะแสดง
-  const displayMembers = initialData // isEditing ดูจาก initialData
-    ? nocMembers
-    : nocMembers.filter(m => m.name === currentUser);
+  // ✅ แก้ไข: แสดงสมาชิกทุกคนเสมอ เพื่อให้สามารถเลือกเพื่อนร่วมงานได้ (เช่น เข้าเวรคู่)
+  const displayMembers = nocMembers;
 
   return {
     formData,

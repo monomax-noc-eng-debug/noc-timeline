@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FilePlus2, Search, X, LayoutDashboard, Download, Filter, AlertCircle, PlayCircle, CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react';
 import IncidentCard from './IncidentCard';
+import { useTicketOptions } from '../../hooks/useTicketOptions';
 
 // ✅ Custom Hook: สำหรับหน่วงเวลาการค้นหา (Debounce)
 function useDebounce(value, delay) {
@@ -30,6 +31,9 @@ export default function CaseList({
   hasActiveFilters,
   loading
 }) {
+  // Get ticket options from Firestore
+  const { ticketOptions } = useTicketOptions();
+
   // 1. ✅ Local State สำหรับ Search Input (พิมพ์ลื่น ไม่กระตุก)
   const [localSearch, setLocalSearch] = useState(searchTerm);
   const debouncedSearch = useDebounce(localSearch, 300); // รอ 300ms ค่อยส่งค่า
@@ -90,9 +94,9 @@ export default function CaseList({
                 <LayoutDashboard size={18} className="text-white dark:text-zinc-900" />
               </div>
               <div>
-                <h1 className="text-sm font-black uppercase tracking-tight text-zinc-900 dark:text-white leading-none">Incidents</h1>
+                <h1 className="text-sm font-black uppercase tracking-tight text-zinc-900 dark:text-white leading-none">Ticket Timeline</h1>
                 <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                  Active Operational Log
+                  Active Ticket Logs
                 </p>
               </div>
             </div>
@@ -108,7 +112,7 @@ export default function CaseList({
               <button
                 onClick={onAddIncident}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-md hover:opacity-90 active:scale-95 transition-all"
-                title="New Incident"
+                title="New Case"
               >
                 <FilePlus2 size={16} />
               </button>
@@ -168,9 +172,9 @@ export default function CaseList({
                 className="h-8 pl-2 pr-1 bg-transparent border-none text-[9px] font-black uppercase text-zinc-500 dark:text-zinc-400 outline-none cursor-pointer appearance-none"
               >
                 <option value="All">Type: All</option>
-                <option value="Incident">Incident</option>
-                <option value="Request">Request</option>
-                <option value="Maintenance">Maint</option>
+                {(ticketOptions.types || ['Incident', 'Request', 'Maintenance']).map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
               </select>
 
               {hasActiveFilters && (

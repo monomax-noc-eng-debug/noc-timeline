@@ -1,8 +1,9 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store/useStore';
 import MainLayout from './components/MainLayout';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from "@/components/ui/toaster";
 
 // Pages - Lazy Loaded
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -13,6 +14,7 @@ const TicketLogPage = lazy(() => import('./pages/TicketLogPage'));
 const TodayPage = lazy(() => import('./pages/schedule/TodayPage'));
 const HistoryPage = lazy(() => import('./pages/schedule/HistoryPage'));
 const DocsPage = lazy(() => import('./pages/DocsPage'));
+const ConfigPage = lazy(() => import('./pages/ConfigPage'));
 
 // Loading Fallback
 const PageLoader = () => (
@@ -32,13 +34,11 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-import { Toaster } from "@/components/ui/toaster";
-
 export default function App() {
   const darkMode = useStore((state) => state.darkMode);
 
-  // จัดการ Class 'dark' ที่ html tag เพื่อรองรับ Tailwind Dark Mode
-  useEffect(() => {
+  // ✅ Dark Mode Effect: Sync state with HTML class
+  React.useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -67,7 +67,7 @@ export default function App() {
                     <Route path="/schedule/today" element={<TodayPage />} />
                     <Route path="/schedule/history" element={<HistoryPage />} />
 
-                    {/* ระบบจัดการ Ticket (หน้าใหม่ที่เพิ่มเข้ามา) */}
+                    {/* ระบบจัดการ Ticket */}
                     <Route path="/tickets" element={<TicketLogPage />} />
 
                     {/* ระบบ Timeline และ Incident */}
@@ -78,6 +78,9 @@ export default function App() {
 
                     {/* คู่มือการใช้งาน (Documentation) */}
                     <Route path="/docs" element={<DocsPage />} />
+
+                    {/* ระบบตั้งค่า Master Data */}
+                    <Route path="/settings/config" element={<ConfigPage />} />
 
                     {/* กรณีพิมพ์ URL มั่ว ให้ดีดกลับหน้าหลัก */}
                     <Route path="*" element={<Navigate to="/" replace />} />

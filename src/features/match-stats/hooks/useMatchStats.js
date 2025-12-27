@@ -1,9 +1,11 @@
 // src/features/match-stats/hooks/useMatchStats.js
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
 import { convertToGB, parseAbbrev, formatNumber, formatPercent } from '../../../utils/formatters';
+import { useStore } from '../../../store/useStore'; // ✅ 1. Import Store
 
 const COLLECTION_NAME = 'schedules';
 
@@ -31,6 +33,9 @@ export function useMatchStats(matchData, onClose) {
   // UI State
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [preview, setPreview] = useState({ show: false, data: [] });
+
+  const queryClient = useQueryClient();
+  const { currentUser } = useStore(); // ✅ 2. ดึง currentUser มาใช้
 
   const { toast } = useToast();
   const showToast = useCallback((message, type = 'success') => {
@@ -99,7 +104,13 @@ export function useMatchStats(matchData, onClose) {
 
   useEffect(() => { fetchMatchData(); }, [fetchMatchData]);
 
-  // --- Logic Handlers ---
+  // ✅ 2. Auto Calc Time when empty
+  useEffect(() => {
+    if (!fetching && !loading && !form.rangeStart && !form.rangeEnd && matchData) {
+      handleAutoFixTime();
+    }
+  }, [fetching, loading, form.rangeStart, form.rangeEnd, matchData, statType]);
+
   const toggleCdnMode = () => {
     setIsMultiCdnMode(prev => !prev);
     if (!isMultiCdnMode && cdnList.length === 0) {
@@ -122,9 +133,12 @@ export function useMatchStats(matchData, onClose) {
   const handleUpdateCdnRow = (id, field, value) => setCdnList(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
 
   // --- ✅ 3. Auto Fix Time (Corrected Logic) ---
-  const handleAutoFixTime = () => {
+  const handleAutoFixTime = (isManual = false) => {
     let rawTime = matchData?.startTime || matchData?.start_time || matchData?.time;
-    if (!rawTime) { showToast("ไม่พบข้อมูลเวลาแข่ง", "error"); return; }
+    if (!rawTime) {
+      if (isManual) showToast("ไม่พบข้อมูลเวลาแข่ง", "error");
+      return;
+    }
 
     try {
       const parseTime = (str) => {
@@ -139,7 +153,10 @@ export function useMatchStats(matchData, onClose) {
       };
 
       const timeObj = parseTime(rawTime);
-      if (!timeObj) { showToast("รูปแบบเวลาไม่ถูกต้อง", "error"); return; }
+      if (!timeObj) {
+        if (isManual) showToast("รูปแบบเวลาไม่ถูกต้อง", "error");
+        return;
+      }
 
       const addTime = (baseH, baseM, minsToAdd) => {
         let totalMinutes = baseH * 60 + baseM + minsToAdd;
@@ -162,10 +179,8 @@ export function useMatchStats(matchData, onClose) {
       }
 
       setForm(prev => ({ ...prev, rangeStart: newStart, rangeEnd: newEnd }));
-      showToast(`คำนวณเวลา (${statType}): ${newStart} - ${newEnd}`, "success");
-
     } catch (err) {
-      showToast("เกิดข้อผิดพลาดในการคำนวณ", "error");
+      if (isManual) showToast("เกิดข้อผิดพลาดในการคำนวณ", "error");
     }
   };
 
@@ -178,6 +193,9 @@ export function useMatchStats(matchData, onClose) {
       const matchRef = doc(db, COLLECTION_NAME, matchData.id);
       const statRef = doc(db, COLLECTION_NAME, matchData.id, 'statistics', statDocId);
 
+      // ✅ 4. Prepare User Name (Handle both Object and String)
+      const reporter = typeof currentUser === 'object' ? currentUser?.name : currentUser;
+
       const payload = {
         ...form,
         cdn: isMultiCdnMode ? 'Multi CDN' : form.cdn,
@@ -186,7 +204,8 @@ export function useMatchStats(matchData, onClose) {
         statType,
         bwPeakGbps: form.bwPeakGbps || { val: '', unit: 'GB' },
         bandwidth: form.bandwidth || { val: '', unit: 'GB' },
-        reqTotal: form.reqTotal || { val: '', unit: 'k' }
+        reqTotal: form.reqTotal || { val: '', unit: 'k' },
+        reporter: reporter || 'Unknown' // ✅ บันทึกชื่อผู้ทำรายการ
       };
 
       await setDoc(statRef, payload);
@@ -195,6 +214,9 @@ export function useMatchStats(matchData, onClose) {
         [statType === 'START' ? 'startStats' : 'endStats']: payload,
         updatedAt: serverTimestamp()
       });
+
+      // ✅ Invalidate Cache
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
 
       showToast("บันทึกข้อมูลเรียบร้อยแล้ว", "success");
       setIsSuccess(true);
@@ -225,6 +247,10 @@ export function useMatchStats(matchData, onClose) {
             [statType === 'START' ? 'startStats' : 'endStats']: null,
             updatedAt: serverTimestamp()
           });
+
+          // ✅ Invalidate Cache
+          queryClient.invalidateQueries({ queryKey: ['matches'] });
+
           showToast("รีเซ็ตเรียบร้อย", "success");
           setTimeout(onClose, 1000);
         } catch (e) {
@@ -279,6 +305,6 @@ export function useMatchStats(matchData, onClose) {
 
   return {
     state: { statType, loading, fetching, saving, isSuccess, form, cdnList, isMultiCdnMode, reporterName, confirmModal, preview },
-    actions: { setStatType, setForm, toggleCdnMode, handleAddCdn, handleRemoveCdn, handleUpdateCdnRow, handleAutoFixTime, handleSmartSave, requestDelete, handlePreview, closeConfirm: () => setConfirmModal(p => ({ ...p, isOpen: false })), closePreview: () => setPreview(p => ({ ...p, show: false })) }
+    actions: { setStatType, setForm, toggleCdnMode, handleAddCdn, handleRemoveCdn, handleUpdateCdnRow, handleAutoFixTime: () => handleAutoFixTime(true), handleSmartSave, requestDelete, handlePreview, closeConfirm: () => setConfirmModal(p => ({ ...p, isOpen: false })), closePreview: () => setPreview(p => ({ ...p, show: false })) }
   };
 }

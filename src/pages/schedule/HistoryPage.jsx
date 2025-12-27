@@ -1,3 +1,4 @@
+// file: src/pages/schedule/HistoryPage.jsx
 import React, { useState, useMemo, Suspense, lazy, useEffect, useCallback, useDeferredValue, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
@@ -6,7 +7,7 @@ import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import {
   Search, History, ChevronDown,
-  Calendar, RefreshCw, EyeOff, Eye, Zap, LayoutList, Loader2
+  Calendar, RefreshCw, EyeOff, Eye, Zap, LayoutList, Loader2, Database
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMatches } from '../../features/matches/hooks/useMatches';
@@ -34,6 +35,9 @@ export default function HistoryPage() {
   const [expandedDates, setExpandedDates] = useState({});
   const [hideFinished, setHideFinished] = useState(true);
 
+  // Refresh Animation State
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // --- Data Fetching ---
   const { matches, groupedData, loading, loadMore, hasMore, refetch } = useMatches(
     null,
@@ -49,7 +53,6 @@ export default function HistoryPage() {
     [matches, todayStr]
   );
 
-  // Responsive Listener (Debounced)
   useEffect(() => {
     let timeoutId;
     const handleResize = () => {
@@ -63,6 +66,13 @@ export default function HistoryPage() {
     };
   }, []);
 
+  // Manual Refresh Handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
+
   // Filtered Calendar Events
   const calendarEvents = useMemo(() => {
     return matches
@@ -75,7 +85,9 @@ export default function HistoryPage() {
       })
       .map(m => ({
         id: m.id,
-        title: (m.teamA && m.teamB) ? `${m.startTime} ${m.teamA} vs ${m.teamB}` : `${m.startTime} ${m.title || 'Match'}`,
+        title: (m.teamA && m.teamB)
+          ? `${m.startTime || ''} ${m.teamA} vs ${m.teamB}`.trim()
+          : `${m.startTime || ''} ${m.title || 'Match'}`.trim(),
         start: m.startDate,
         extendedProps: { ...m, isCompleted: m.hasEndStat || m.startDate < todayStr }
       }));
@@ -96,9 +108,12 @@ export default function HistoryPage() {
 
     if (!deferredSearch) return baseData;
     const query = deferredSearch.toLowerCase();
-    return baseData.filter(([, list]) =>
-      list.some(m => m._searchString?.includes(query))
-    );
+
+    // Safe Search Filter
+    return baseData.map(([date, list]) => [
+      date,
+      list.filter(m => m._searchString?.includes(query))
+    ]).filter(([, list]) => list.length > 0);
   }, [groupedData, deferredSearch, hideFinished, todayStr]);
 
   // --- Handlers ---
@@ -107,6 +122,12 @@ export default function HistoryPage() {
       start: arg.startStr.split('T')[0],
       end: arg.endStr.split('T')[0]
     });
+  }, []);
+
+  // ✅ Memoized click handler for MatchCard performance
+  const handleCardClick = useCallback((match) => {
+    setSelectedMatch(match);
+    setIsModalOpen(true);
   }, []);
 
   const handleModeSwitch = (mode) => {
@@ -123,18 +144,18 @@ export default function HistoryPage() {
       return (
         <div className="flex items-center gap-1 overflow-hidden px-0.5">
           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-          <span className="text-[9px] font-mono text-zinc-500 leading-none">{startTime}</span>
+          <span className="text-[9px] font-mono text-zinc-500 leading-none">{startTime || '-'}</span>
         </div>
       );
     }
 
     return (
       <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border-l-2 text-[9px] truncate w-full cursor-pointer hover:opacity-80 transition-opacity ${isCompleted
-          ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : 'border-zinc-300 bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+        : 'border-zinc-300 bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
         }`}>
-        <span className="font-mono font-bold opacity-75">{startTime}</span>
-        <span className="font-bold truncate">{displayText}</span>
+        <span className="font-mono font-bold opacity-75">{startTime || ''}</span>
+        <span className="font-bold truncate">{displayText || 'Untitled'}</span>
       </div>
     );
   }, [isMobile]);
@@ -150,7 +171,7 @@ export default function HistoryPage() {
           <GoogleSyncModal
             isOpen={isSyncModalOpen}
             onClose={() => setIsSyncModalOpen(false)}
-            onSyncComplete={() => { if (refetch) refetch(); else window.location.reload(); }}
+            onSyncComplete={() => { handleRefresh(); }}
           />
         )}
       </Suspense>
@@ -166,7 +187,7 @@ export default function HistoryPage() {
                 <History size={20} className="text-white dark:text-zinc-900" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-black uppercase tracking-tight text-zinc-900 dark:text-white leading-none">Archive</h1>
+                <h1 className="text-lg font-black uppercase tracking-tight text-zinc-900 dark:text-white leading-none">Calendar</h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Operational Database</p>
@@ -180,16 +201,29 @@ export default function HistoryPage() {
                 <button
                   onClick={() => setHideFinished(!hideFinished)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${hideFinished
-                      ? 'bg-white dark:bg-zinc-800 text-amber-600 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700'
-                      : 'text-zinc-400 hover:text-zinc-600'
+                    ? 'bg-white dark:bg-zinc-800 text-amber-600 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700'
+                    : 'text-zinc-400 hover:text-zinc-600'
                     }`}
                 >
                   {hideFinished ? <EyeOff size={14} /> : <Eye size={14} />}
                   <span className="hidden md:inline">{hideFinished ? 'Hidden' : 'Show All'}</span>
                 </button>
+
                 <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-                <button onClick={() => setIsSyncModalOpen(true)} className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors" title="Sync Data">
-                  <RefreshCw size={16} />
+
+                <button
+                  onClick={handleRefresh}
+                  disabled={loading || isRefreshing}
+                  className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
+                  title="Refresh Database"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                </button>
+
+                <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
+
+                <button onClick={() => setIsSyncModalOpen(true)} className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors" title="Sync from Google Sheets">
+                  <Database size={16} />
                 </button>
               </div>
 
@@ -242,12 +276,12 @@ export default function HistoryPage() {
           {loading && matches.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center opacity-50 space-y-4">
               <Loader2 size={40} className="animate-spin text-zinc-400" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Loading Archive...</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Loading Calendar...</p>
             </div>
           ) : (
             <>
               {viewMode === 'calendar' ? (
-                <div className="bg-white dark:bg-[#0a0a0a] p-2 md:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm animate-in zoom-in-95 duration-300">
+                <div className="bg-white dark:bg-[#0a0a0a] p-2 md:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm animate-in zoom-in-95 duration-300 overflow-x-auto">
                   <FullCalendar
                     plugins={[dayGridPlugin, interactionPlugin, listPlugin]}
                     initialView={isMobile ? "listMonth" : "dayGridMonth"}
@@ -268,10 +302,11 @@ export default function HistoryPage() {
                 </div>
               ) : (
                 <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-300">
+                  {/* Original Grouped List Layout */}
                   {filteredGroups.map(([date, list]) => (
                     <div key={date} className="bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
                       <button
-                        onClick={() => setExpandedDates(p => ({ ...p, [date]: !p[date] }))}
+                        onClick={() => setExpandedDates(p => ({ ...p, [date]: p[date] === undefined ? true : !p[date] }))}
                         className="w-full px-5 py-4 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50"
                       >
                         <div className="flex items-center gap-4">
@@ -289,7 +324,7 @@ export default function HistoryPage() {
                       {expandedDates[date] && (
                         <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3 border-t border-zinc-100 dark:border-zinc-800">
                           {list.map(m => (
-                            <MatchCard key={m.id} match={m} onClick={() => { setSelectedMatch(m); setIsModalOpen(true); }} />
+                            <MatchCard key={m.id} match={m} onClick={() => handleCardClick(m)} />
                           ))}
                         </div>
                       )}
@@ -300,7 +335,7 @@ export default function HistoryPage() {
                     <button
                       onClick={loadMore}
                       disabled={loading}
-                      className="w-full py-4 mt-6 bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all"
+                      className="w-full py-3 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[10px] font-black uppercase text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all"
                     >
                       {loading ? 'Loading...' : 'Load Older Records'}
                     </button>

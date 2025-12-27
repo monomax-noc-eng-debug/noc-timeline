@@ -1,7 +1,8 @@
+// file: src/features/matches/hooks/useMatches.js
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns'; // ✅ เพิ่ม isValid
 import { useState, useMemo } from 'react';
 
 // Fetcher Function
@@ -10,12 +11,21 @@ const fetchMatches = async ({ queryKey }) => {
   const scheduleRef = collection(db, 'schedules');
   let q;
 
-  // 1. Single Date (Today)
+  // 1. Single Date (Today View)
   if (dateFilter) {
-    const dateStr = dateFilter instanceof Date ? format(dateFilter, 'yyyy-MM-dd') : dateFilter;
+    let dateStr = dateFilter;
+    // ✅ ตรวจสอบความถูกต้องของ Date Object
+    if (dateFilter instanceof Date) {
+      if (isValid(dateFilter)) {
+        dateStr = format(dateFilter, 'yyyy-MM-dd');
+      } else {
+        console.warn("Invalid Date Object passed to useMatches");
+        return []; // คืนค่าว่างถ้าวันที่ผิด กันแอปพัง
+      }
+    }
     q = query(scheduleRef, where('startDate', '==', dateStr), orderBy('startTime', 'asc'));
   }
-  // 2. Date Range (Calendar)
+  // 2. Date Range (Calendar View)
   else if (dateRange?.start && dateRange?.end) {
     q = query(
       scheduleRef,
@@ -25,7 +35,7 @@ const fetchMatches = async ({ queryKey }) => {
       orderBy('startTime', 'asc')
     );
   }
-  // 3. Default List (Archive)
+  // 3. Default List (History/Archive View)
   else {
     q = query(scheduleRef, orderBy('startDate', 'desc'), orderBy('startTime', 'asc'), limit(itemsLimit));
   }
@@ -38,7 +48,7 @@ const fetchMatches = async ({ queryKey }) => {
       ...data,
       hasStartStat: !!data.hasStartStat,
       hasEndStat: !!data.hasEndStat,
-      // 🚀 Performance: เตรียม search string รวมวันที่เข้าไปด้วย เพื่อให้ค้นหาได้เร็วกว่าเดิม
+      // 🚀 Performance: เตรียม Search String ไว้เลย
       _searchString: `${data.teamA || ''} ${data.teamB || ''} ${data.match || ''} ${data.title || ''} ${data.league || ''} ${data.startDate || ''}`.toLowerCase()
     };
   });
@@ -51,12 +61,12 @@ export const useMatches = (dateFilter, dateRange, enabled = true) => {
     queryKey: ['matches', { dateFilter, dateRange, limit: itemsLimit }],
     queryFn: fetchMatches,
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 🚀 เก็บข้อมูลใน Cache ไว้ 5 นาที (ไม่ต้องโหลดใหม่ตอนสลับหน้า)
-    gcTime: 1000 * 60 * 30, // เก็บไว้ใน Memory นานขึ้น
-    enabled: enabled, // 🚀 ควบคุมการ Fetch ได้ (เช่น รอให้มี Range ก่อนค่อยดึง)
+    staleTime: 1000 * 60 * 5, // Cache 5 นาที
+    gcTime: 1000 * 60 * 30,   // เก็บใน Memory 30 นาที
+    enabled: enabled,         // ควบคุมการ Fetch (เช่น รอ user เลือกวันก่อน)
   });
 
-  // Grouping Helper (Memoized เพื่อลดการคำนวณซ้ำ)
+  // Grouping Helper (Memoized)
   const groupedData = useMemo(() => {
     if (matches.length === 0) return [];
     const groups = {};
@@ -65,6 +75,7 @@ export const useMatches = (dateFilter, dateRange, enabled = true) => {
       if (!groups[date]) groups[date] = [];
       groups[date].push(match);
     }
+    // เรียงวันที่จากน้อยไปมาก (เก่า -> ใหม่)
     return Object.entries(groups).sort((a, b) => new Date(a[0]) - new Date(b[0]));
   }, [matches]);
 
@@ -75,8 +86,8 @@ export const useMatches = (dateFilter, dateRange, enabled = true) => {
   return {
     matches,
     groupedData,
-    loading: isLoading, // Initial Load
-    isFetching, // Background Update
+    loading: isLoading,
+    isFetching,
     loadMore,
     hasMore: true,
     refetch

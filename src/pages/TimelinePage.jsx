@@ -64,7 +64,7 @@ export default function TimelinePage() {
         action: ''
       });
       setSelectedId(newDoc.id);
-      showToast('Incident created');
+      showToast('Case created');
     } catch (error) {
       console.error("Error creating incident:", error);
       showToast(error.message || 'Failed to create incident', 'error');
@@ -76,7 +76,7 @@ export default function TimelinePage() {
   const handleDeleteIncident = (id) => {
     setConfirmModal({
       isOpen: true,
-      title: 'Delete Incident?',
+      title: 'Delete Case?',
       message: 'This action cannot be undone. All timeline events will be permanently deleted.',
       isDanger: true,
       onConfirm: async () => {
@@ -84,7 +84,7 @@ export default function TimelinePage() {
           await incidentService.deleteIncident(id);
           if (selectedId === id) setSelectedId(null);
           setConfirmModal({ isOpen: false });
-          showToast('Incident deleted');
+          showToast('Case deleted');
         } catch (error) {
           console.error("Error deleting incident:", error);
           showToast(error.message || 'Failed to delete', 'error');
@@ -173,7 +173,7 @@ export default function TimelinePage() {
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `Incidents_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `TicketTimeline_Export_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
 
     showToast('CSV exported');

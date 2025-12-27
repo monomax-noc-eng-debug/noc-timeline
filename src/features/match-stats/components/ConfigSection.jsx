@@ -1,172 +1,221 @@
 // src/features/match-stats/components/ConfigSection.jsx
-import React from 'react';
-import { Gauge, Globe, Layers, Plus, Trash2, Settings, MonitorPlay } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Gauge, Globe, Layers, Plus, Trash2, Settings,
+  MonitorPlay, ArrowRight, Wand2, Clock, Check
+} from 'lucide-react';
 
 export default function ConfigSection({
   form, setForm,
   isMultiCdnMode, toggleCdnMode,
   cdnList, onAdd, onRemove, onUpdate,
   onAutoFix,
-  statType // ✅ รับ statType เข้ามา
+  statType,
+  masterConfigs = { channels: [], cdnOptions: [] }
 }) {
-  return (
-    <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-        <div className="flex items-center gap-2">
-          <Gauge size={16} className="text-orange-500" />
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Configuration</h3>
-        </div>
+  const [isFocused, setIsFocused] = useState(false);
 
-        {/* Auto Calc Button */}
-        {onAutoFix && (
-          <button
-            onClick={onAutoFix}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-orange-100 transition-colors"
-          >
-            <Settings size={12} /> Auto Calc Time
-          </button>
-        )}
+  // Helper to check if a specific single CDN is active
+  const isActiveCdn = (id) => form.cdn === id;
+
+  return (
+    <div className="space-y-3">
+      {/* Header & Title - Extremely Minimal */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+          <Gauge size={14} className="text-orange-500" />
+          <span className="text-xs font-bold uppercase tracking-wider">Configuration</span>
+        </div>
       </div>
 
-      {/* ✅ Compact Row: Time Range + Live Channel */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-        {/* Start Time */}
-        <div className="md:col-span-3">
-          <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-wide mb-1 block">
-            Range Start (Kick-off)
-          </label>
-          <input
-            type="time"
-            value={form.rangeStart}
-            onChange={e => setForm({ ...form, rangeStart: e.target.value })}
-            className="w-full p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold focus:ring-1 ring-orange-500 outline-none"
-          />
+      {/* Main Control Group: Time & Channel merged */}
+      <div className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800">
+
+        {/* Time Range Section */}
+        <div className="flex-1 p-2 flex items-center gap-3 relative">
+          <Clock size={14} className="text-zinc-400 shrink-0" />
+
+          <div className="flex items-center gap-2 w-full">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-zinc-400 uppercase leading-none mb-0.5">Start</span>
+              <input
+                type="time"
+                value={form.rangeStart}
+                onChange={e => setForm({ ...form, rangeStart: e.target.value })}
+                className="bg-transparent text-xs font-bold text-zinc-900 dark:text-zinc-100 p-0 border-none focus:ring-0 w-[60px] h-4 leading-none"
+              />
+            </div>
+
+            <ArrowRight size={12} className="text-zinc-300 dark:text-zinc-700" />
+
+            <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-zinc-400 uppercase leading-none mb-0.5">
+                End {statType === 'START' ? '(+15m)' : '(+2h)'}
+              </span>
+              <input
+                type="time"
+                value={form.rangeEnd}
+                onChange={e => setForm({ ...form, rangeEnd: e.target.value })}
+                className="bg-transparent text-xs font-bold text-zinc-900 dark:text-zinc-100 p-0 border-none focus:ring-0 w-[60px] h-4 leading-none"
+              />
+            </div>
+          </div>
+
+          {/* Auto Fix Button (Floating Action) */}
+          {onAutoFix && (
+            <button
+              onClick={onAutoFix}
+              title="Auto Calculate Time"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+            >
+              <Wand2 size={12} />
+            </button>
+          )}
         </div>
 
-        {/* End Time (Dynamic Label) */}
-        <div className="md:col-span-3">
-          <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-wide mb-1 block">
-            Range End {statType === 'START' ? '(+15m)' : '(+2h)'} {/* ✅ เปลี่ยน Label ตาม Phase */}
-          </label>
-          <input
-            type="time"
-            value={form.rangeEnd}
-            onChange={e => setForm({ ...form, rangeEnd: e.target.value })}
-            className="w-full p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold focus:ring-1 ring-orange-500 outline-none"
-          />
-        </div>
-
-        {/* Live Channel */}
-        <div className="md:col-span-6">
-          <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-wide mb-1 block">Live Channel ID</label>
-          <div className="relative">
+        {/* Live Channel Section */}
+        <div className="flex-[1.5] p-2 flex items-center gap-3 relative">
+          <MonitorPlay size={14} className="text-zinc-400 shrink-0" />
+          <div className="w-full relative">
+            <span className="text-[9px] font-bold text-zinc-400 uppercase leading-none block mb-0.5">Channel Source</span>
             <input
               type="text"
               value={form.liveChannel}
               onChange={e => setForm({ ...form, liveChannel: e.target.value })}
-              onFocus={() => document.getElementById('custom-dropdown')?.classList.remove('hidden')}
-              onBlur={() => setTimeout(() => document.getElementById('custom-dropdown')?.classList.add('hidden'), 200)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               placeholder="Select Channel..."
-              className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold focus:ring-1 ring-orange-500 outline-none"
+              className="w-full bg-transparent text-xs font-bold text-zinc-900 dark:text-zinc-100 p-0 border-none focus:ring-0 h-4 leading-none placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
             />
-            <MonitorPlay size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
 
-            {/* Dropdown */}
-            <div id="custom-dropdown" className="hidden absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50">
-              {[
-                ...Array.from({ length: 24 }, (_, i) => `Sport ${i + 1}`),
-                'Thaileague', 'Sport-T 101', 'Sport-T 102',
-                ...Array.from({ length: 21 }, (_, i) => `TL${i + 1}`)
-              ].filter(opt => opt.toLowerCase().includes((form.liveChannel || '').toLowerCase())).map(opt => (
-                <div
-                  key={opt}
-                  onMouseDown={() => setForm({ ...form, liveChannel: opt })}
-                  className="px-3 py-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/20 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-300"
-                >
-                  {opt}
-                </div>
-              ))}
-            </div>
+            {/* Dropdown Results */}
+            {isFocused && (
+              <div className="absolute top-full left-0 right-0 mt-3 max-h-40 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 py-1">
+                {masterConfigs.channels.length > 0 ? (
+                  masterConfigs.channels
+                    .filter(opt => opt.toLowerCase().includes((form.liveChannel || '').toLowerCase()))
+                    .map(opt => (
+                      <div
+                        key={opt}
+                        onMouseDown={() => setForm({ ...form, liveChannel: opt })}
+                        className="px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center justify-between group/item"
+                      >
+                        {opt}
+                        {form.liveChannel === opt && <Check size={12} className="text-orange-500" />}
+                      </div>
+                    ))
+                ) : (
+                  <div className="px-3 py-2 text-xs text-zinc-400 italic">No channels found</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* CDN Strategy (ส่วนที่เหลือเหมือนเดิม) */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-wide flex items-center gap-2">CDN Strategy</label>
-          <button
-            onClick={toggleCdnMode}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold transition-all border ${isMultiCdnMode ? 'bg-black text-white border-black dark:bg-white dark:text-black' : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700'}`}
-          >
-            <Layers size={10} /> {isMultiCdnMode ? 'Multi-CDN' : 'Single'}
-          </button>
+      {/* CDN Strategy Section */}
+      <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-xl p-2 border border-zinc-200/50 dark:border-zinc-800/50">
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide pl-1">
+            CDN Distribution
+          </label>
+
+          {/* Segmented Control Toggle */}
+          <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-0.5">
+            <button
+              onClick={() => isMultiCdnMode && toggleCdnMode()}
+              className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 ${!isMultiCdnMode
+                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                }`}
+            >
+              Single
+            </button>
+            <button
+              onClick={() => !isMultiCdnMode && toggleCdnMode()}
+              className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1.5 ${isMultiCdnMode
+                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                }`}
+            >
+              Multi-CDN
+            </button>
+          </div>
         </div>
 
         {!isMultiCdnMode ? (
-          /* Single Mode */
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {['AWS', 'Tencent', 'Huawei', 'BytePlus', 'Wangsu', 'Akamai'].map(cdn => (
-              <button
-                key={cdn}
-                onClick={() => setForm({ ...form, cdn })}
-                className={`py-2 px-1 rounded-lg border text-xs font-bold transition-all flex flex-col items-center gap-1 ${form.cdn === cdn ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black border-zinc-900 dark:border-zinc-100 shadow-sm' : 'bg-white dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300'}`}
-              >
-                <Globe size={14} className={form.cdn === cdn ? "opacity-100" : "opacity-50"} /> {cdn}
-              </button>
-            ))}
+          /* Single Mode: Badge/Chip Layout */
+          <div className="flex flex-wrap gap-2">
+            {masterConfigs.cdnOptions
+              .filter(cdn => cdn.id !== 'Multi CDN')
+              .map(cdn => (
+                <button
+                  key={cdn.id}
+                  onClick={() => setForm({ ...form, cdn: cdn.id })}
+                  className={`
+                    group relative px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all flex items-center gap-2
+                    ${isActiveCdn(cdn.id)
+                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-md transform scale-[1.02]'
+                      : 'bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-white'
+                    }
+                  `}
+                >
+                  <Globe size={12} className={isActiveCdn(cdn.id) ? "opacity-100" : "opacity-50 group-hover:opacity-100"} />
+                  {cdn.label}
+                  {isActiveCdn(cdn.id) && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border-2 border-white dark:border-zinc-900" />}
+                </button>
+              ))}
           </div>
         ) : (
-          /* Multi Mode (Compact List) */
-          <div className="space-y-2">
+          /* Multi Mode: Compact Table Rows */
+          <div className="space-y-1.5">
             {cdnList.map((item, index) => (
-              <div key={item.id} className="flex items-center gap-2 p-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700">
-
-                {/* Provider */}
-                <div className="w-1/3 min-w-[120px]">
-                  <div className="relative">
-                    <select
-                      value={item.provider}
-                      onChange={(e) => onUpdate(item.id, 'provider', e.target.value)}
-                      className="w-full py-1.5 pl-2 pr-6 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 text-[10px] font-bold outline-none focus:ring-1 ring-orange-500 appearance-none cursor-pointer"
-                    >
-                      <option value="Select Provider">Select...</option>
-                      <option value="AWS">AWS</option>
-                      <option value="Tencent">Tencent</option>
-                      <option value="Huawei">Huawei</option>
-                      <option value="BytePlus">BytePlus</option>
-                      <option value="Wangsu">Wangsu</option>
-                      <option value="Akamai">Akamai</option>
-                    </select>
-                    <Globe size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                  </div>
+              <div key={item.id} className="flex items-center gap-2 p-1.5 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm group">
+                {/* Provider Selector - Ghost Style */}
+                <div className="w-[120px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 pr-2">
+                  <select
+                    value={item.provider}
+                    onChange={(e) => onUpdate(item.id, 'provider', e.target.value)}
+                    className="w-full bg-transparent text-[11px] font-bold text-zinc-700 dark:text-zinc-200 outline-none cursor-pointer py-1"
+                  >
+                    <option value="Select Provider">Select Provider</option>
+                    {masterConfigs.cdnOptions
+                      .filter(cdn => cdn.id !== 'Multi CDN')
+                      .map(cdn => (
+                        <option key={cdn.id} value={cdn.id}>{cdn.label}</option>
+                      ))}
+                  </select>
                 </div>
 
-                {/* Config Key */}
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Config Key..."
-                      value={item.key || ''}
-                      onChange={(e) => onUpdate(item.id, 'key', e.target.value)}
-                      className="w-full pl-6 pr-2 py-1.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 text-[10px] font-bold outline-none focus:ring-1 ring-orange-500"
-                    />
-                    <Settings size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-400" />
-                  </div>
+                {/* Key Input - Ghost Style */}
+                <div className="flex-1 relative">
+                  <Settings size={10} className="absolute left-0 top-1/2 -translate-y-1/2 text-zinc-300 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Enter Config Key..."
+                    value={item.key || ''}
+                    onChange={(e) => onUpdate(item.id, 'key', e.target.value)}
+                    className="w-full pl-4 bg-transparent text-[11px] font-medium text-zinc-600 dark:text-zinc-300 placeholder:text-zinc-300 outline-none border-none p-0 focus:ring-0"
+                  />
                 </div>
 
-                {/* Remove */}
+                {/* Delete - Visible on Hover */}
                 {cdnList.length > 1 && (
-                  <button onClick={() => onRemove(item.id)} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
+                  <button
+                    onClick={() => onRemove(item.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-300 hover:text-red-500 transition-all"
+                  >
                     <Trash2 size={12} />
                   </button>
                 )}
               </div>
             ))}
-            <button onClick={onAdd} className="w-full py-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-400 font-bold text-[10px] uppercase flex items-center justify-center gap-2 hover:border-orange-400 hover:text-orange-500 transition-all">
-              <Plus size={12} /> Add Provider
+
+            <button
+              onClick={onAdd}
+              className="w-full py-1.5 mt-2 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-orange-300 dark:hover:border-orange-900/50 text-[10px] font-bold text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-all flex items-center justify-center gap-1"
+            >
+              <Plus size={10} /> Add Provider Layer
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, parse, differenceInMinutes, addHours, addDays, subDays } from 'date-fns';
 // ✅ Import Hook ที่เราเพิ่งแก้ไป
 import { useMatches } from '../../../features/matches/hooks/useMatches';
@@ -11,6 +12,7 @@ export const useTodayMatches = (initialDate = new Date()) => {
 
   // ✅ เรียกใช้ useMatches (Version React Query)
   const { matches, loading } = useMatches(selectedDate);
+  const queryClient = useQueryClient();
 
   const { toast } = useToast();
 
@@ -74,6 +76,9 @@ export const useTodayMatches = (initialDate = new Date()) => {
         await matchService.createMatch(data);
         toast({ title: "Created", description: "Match created successfully" });
       }
+      // ✅ Invalidate Cache เพื่อให้ข้อมูลอัปเดตทันที
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+
       setIsManualModalOpen(false);
       setEditingMatch(null);
     } catch (error) {
@@ -87,6 +92,8 @@ export const useTodayMatches = (initialDate = new Date()) => {
     try {
       if (deleteConfirm.id) {
         await matchService.deleteMatch(deleteConfirm.id);
+        // ✅ Invalidate Cache
+        queryClient.invalidateQueries({ queryKey: ['matches'] });
         toast({ title: "Deleted", description: "Match removed" });
       }
     } catch (error) {

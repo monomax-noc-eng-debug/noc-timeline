@@ -11,24 +11,29 @@ export const incidentService = {
   /**
    * Subscribe to incidents list in real-time
    * @param {Function} callback - Receives array of incidents
-   * @param {number} limitCount - Max records to fetch
+   * @param {number} limitCount - Max records to fetch (Increased default to 500)
    * @returns {Function} Unsubscribe function
    */
-  subscribeIncidents: (callback, limitCount = 100) => {
+  subscribeIncidents: (callback, limitCount = 500) => { // ✅ แก้ไข 1: เพิ่ม Limit ป้องกันข้อมูลหาย
     const q = query(
       collection(db, INCIDENTS_COL),
       orderBy("updatedAt", "desc"),
       limit(limitCount)
     );
     return onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        // ✅ Ensure defaults for optional fields
-        status: doc.data().status || 'Open',
-        type: doc.data().type || 'Incident',
-        project: doc.data().project || 'MONOMAX'
-      }));
+      const data = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          // ✅ Ensure defaults for optional fields
+          status: d.status || 'Open',
+          type: d.type || 'Incident',
+          project: d.project || 'MONOMAX',
+          // ✅ แก้ไข 2: คำนวณ Timestamp ไว้เลย เพื่อความเร็วในการ Sort หน้าเว็บ
+          _sortTime: new Date(d.updatedAt || d.createdAt || 0).getTime()
+        };
+      });
       callback(data);
     }, (error) => {
       console.error("Incidents subscription error:", error);
@@ -74,7 +79,7 @@ export const incidentService = {
         ...data,
         status: data.status || 'Open',
         type: data.type || 'Incident',
-        priority: data.priority || 'Medium', // 🔥 Added Priority
+        priority: data.priority || 'Medium',
         project: data.project || 'MONOMAX',
         eventCount: 0,
         createdAt: new Date().toISOString(),
@@ -133,7 +138,7 @@ export const incidentService = {
     try {
       const eventRef = await addDoc(collection(db, INCIDENTS_COL, incidentId, EVENTS_COL), {
         ...data,
-        order: data.order ?? -Date.now(), // Newest at top by default (smallest number)
+        order: data.order ?? -Date.now(),
         imageUrls: data.imageUrls || [],
         createdAt: new Date().toISOString()
       });

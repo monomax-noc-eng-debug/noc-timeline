@@ -3,7 +3,7 @@ import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Activity, Calendar, AlertTriangle, FileText, LogOut, Sun, Moon, X,
-  PanelLeftClose, PanelLeftOpen, Archive, Book
+  PanelLeftClose, PanelLeftOpen, Archive, Book, Settings2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
@@ -47,7 +47,6 @@ export default function Sidebar({ onCloseMobile, isCollapsed = false, toggleColl
             <div className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center font-black italic text-sm shadow-md mx-auto">N</div>
           ) : (
             <div className="text-left">
-              {/* ✅ แก้ไขชื่อเว็บ */}
               <h1 className="text-xl font-black italic tracking-tighter uppercase dark:text-white transition-opacity group-hover:opacity-80 whitespace-nowrap leading-none">
                 NOC <span className="text-zinc-300 dark:text-zinc-600">NTT</span>
               </h1>
@@ -69,19 +68,22 @@ export default function Sidebar({ onCloseMobile, isCollapsed = false, toggleColl
       <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar px-3">
 
         <div className={`mt-2 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>Schedule</div>
-        <NavItem to="/schedule/today" icon={Activity} label="Live Desk" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
-        <NavItem to="/schedule/history" icon={Calendar} label="Archive" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+        <NavItem to="/schedule/today" icon={Activity} label="match" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+        <NavItem to="/schedule/history" icon={Calendar} label="calendar" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
 
         <div className={`mt-6 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>Controls</div>
         <NavItem
           to="/tickets"
           icon={Archive}
-          label="Ticket Log"
+          label="ticket log"
           isCollapsed={isCollapsed}
           handleLinkClick={handleLinkClick}
         />
-        <NavItem to="/incidents" icon={AlertTriangle} label="Incidents" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
-        <NavItem to="/handover" icon={FileText} label="Handover" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+        <NavItem to="/incidents" icon={AlertTriangle} label="ticket timeline" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+        <NavItem to="/handover" icon={FileText} label="shift transfer" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
+
+        <div className={`mt-6 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>System</div>
+        <NavItem to="/settings/config" icon={Settings2} label="Settings" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
 
         <div className={`mt-6 mb-2 px-3 text-[9px] font-black text-zinc-300 dark:text-zinc-700 uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0 mb-0' : 'opacity-100 h-auto'}`}>Documentation</div>
         <NavItem to="/docs" icon={Book} label="User Manual" isCollapsed={isCollapsed} handleLinkClick={handleLinkClick} />
@@ -102,13 +104,16 @@ export default function Sidebar({ onCloseMobile, isCollapsed = false, toggleColl
         {/* User Profile & Logout */}
         <div className={`flex items-center rounded-2xl border border-zinc-100 dark:border-zinc-900 bg-white dark:bg-black transition-all ${isCollapsed ? 'justify-center border-none bg-transparent p-0 w-10 h-10 mx-auto' : 'gap-3 p-2'} `}>
           <div className="w-8 h-8 shrink-0 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-xs shadow-sm">
-            {currentUser ? currentUser.charAt(0).toUpperCase() : 'U'}
+            {/* ✅ แก้ไข: เช็ค currentUser.name แทน และใช้ Optional Chaining */}
+            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
           </div>
 
           {showLabel && (
             <div className="flex-1 min-w-0 overflow-hidden">
-              <p className="text-xs font-bold truncate dark:text-white">{currentUser || 'Guest'}</p>
-              <p className="text-[9px] text-zinc-400 font-medium truncate uppercase tracking-wider">Operator</p>
+              {/* ✅ แก้ไข: แสดงชื่อจาก Object */}
+              <p className="text-xs font-bold truncate dark:text-white">{currentUser?.name || 'Guest'}</p>
+              {/* ✅ เพิ่ม: แสดง Role จริงแทน Text ตายตัว */}
+              <p className="text-[9px] text-zinc-400 font-medium truncate uppercase tracking-wider">{currentUser?.role || 'Operator'}</p>
             </div>
           )}
 

@@ -1,3 +1,4 @@
+// file: src/features/matches/components/GoogleSyncModal.jsx
 import React, { useState } from 'react';
 import {
   CloudDownload, Calendar, Loader2, AlertCircle, Save,
@@ -6,10 +7,12 @@ import {
 } from 'lucide-react';
 import { writeBatch, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebaseConfig';
+import { useStore } from '../../../store/useStore'; // ✅ 1. Import Store
 
 const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
 export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
+  const { currentUser } = useStore(); // ✅ 2. ดึง User
   const [syncMode, setSyncMode] = useState('daily');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -33,15 +36,16 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
     const paramDate = syncMode === 'daily' ? date : month;
 
     try {
-      if (!GOOGLE_SCRIPT_URL) throw new Error("API URL not configured.");
+      if (!GOOGLE_SCRIPT_URL) throw new Error("API URL not configured in .env (VITE_GOOGLE_SCRIPT_URL)");
 
       // A. Fetch from Google Sheet
       const response = await fetch(`${GOOGLE_SCRIPT_URL}?date=${paramDate}`);
-      if (!response.ok) throw new Error("Failed to fetch from Google Script");
-      const result = await response.json();
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
 
+      const result = await response.json();
       const rawData = Array.isArray(result) ? result : (result.data || []);
-      if (rawData.length === 0) throw new Error("No data found in Sheet.");
+
+      if (rawData.length === 0) throw new Error("No matches found in Google Sheet for this period.");
       if (rawData[0]?.error) throw new Error(rawData[0].error);
 
       // Map Data
@@ -49,8 +53,13 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
         const fullMatchName = item.match || item.title || item.Match || '';
         let teamA = fullMatchName;
         let teamB = '';
+
+        // Basic parser for "Team A vs Team B"
         if (fullMatchName.includes(' vs ')) {
           const p = fullMatchName.split(' vs ');
+          teamA = p[0].trim(); teamB = p[1]?.trim() || '';
+        } else if (fullMatchName.includes(' - ')) {
+          const p = fullMatchName.split(' - ');
           teamA = p[0].trim(); teamB = p[1]?.trim() || '';
         }
 
@@ -59,7 +68,8 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
           time: item.time || item.startTime || '',
           league: item.league || item.calendar || '',
           match: fullMatchName,
-          teamA, teamB,
+          teamA,
+          teamB,
           channel: item.channel || item.Channel || '',
           startDate: item.startDate || (syncMode === 'daily' ? date : ''),
         };
@@ -70,8 +80,6 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
       const updatedItems = [];
       const uptodateItems = [];
 
-      // ใช้ Promise.all เพื่อเช็ค DB ทีละรายการ (หรือถ้าข้อมูลเยอะควร query เป็น chunk)
-      // ในที่นี้สมมติว่า sync ทีละวัน/เดือน ข้อมูลไม่เกิน 100 รายการ เช็คตรงๆ ได้
       await Promise.all(incomingMatches.map(async (incoming) => {
         const docRef = doc(db, 'schedules', incoming.id);
         const docSnap = await getDoc(docRef);
@@ -80,7 +88,7 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
           newItems.push(incoming);
         } else {
           const existing = docSnap.data();
-          // Check Diff (เทียบเฉพาะ field ที่สำคัญ)
+          // Check Diff
           const hasChanges = (
             existing.startTime !== incoming.time ||
             existing.title !== incoming.match ||
@@ -113,18 +121,30 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
       const batch = writeBatch(db);
       const toSave = [...analysis.newItems, ...analysis.updatedItems];
 
+      // ✅ เตรียมชื่อ User
+      const userName = typeof currentUser === 'object' ? currentUser?.name : currentUser;
+      const editorName = userName || 'System Sync';
+
       toSave.forEach(match => {
         const docRef = doc(db, 'schedules', match.id);
-        // Clean up internal props
-        const { _prev, ...data } = match;
+        const { _prev, ...data } = match; // แยกข้อมูล _prev ออก ไม่บันทึกลง DB
 
         batch.set(docRef, {
           ...data,
           title: data.match,
           startTime: data.time,
+
+          // Meta fields
           updatedAt: new Date().toISOString(),
+          updatedBy: editorName, // ✅ บันทึกคนทำรายการ
+
           // Default fields for new items only
-          ...(match._prev ? {} : { hasStartStat: false, hasEndStat: false })
+          ...(!match._prev ? {
+            hasStartStat: false,
+            hasEndStat: false,
+            createdAt: new Date().toISOString(),
+            createdBy: editorName
+          } : {})
         }, { merge: true });
       });
 
@@ -136,7 +156,7 @@ export default function GoogleSyncModal({ isOpen, onClose, onSyncComplete }) {
       setTimeout(() => {
         onClose();
         resetState();
-      }, 1500);
+      }, 2000);
       setStep('success');
 
     } catch (err) {

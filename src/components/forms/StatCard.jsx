@@ -2,11 +2,23 @@ import React from 'react';
 import { TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
 
 export default function StatCard({
-  label, value, unit, onChange, onUnitChange, // รับ unit และ onUnitChange
+  label, value, unit, onChange, onUnitChange,
   placeholder, icon: Icon, color = 'blue',
-  type = 'number', // 'number' (มีหน่วย), 'abbrev' (แบบเดิม), 'percentage'
-  tooltip, previousValue
+  type = 'number',
+  tooltip, previousValue,
+  compact = false, // ✅ Added missing compact prop
+  max
 }) {
+  const handleChange = (v) => {
+    if (max !== undefined && v !== '') {
+      const num = parseFloat(v);
+      if (!isNaN(num) && num > max) {
+        onChange(max.toString());
+        return;
+      }
+    }
+    onChange(v);
+  };
   const colorSchemes = {
     blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-800', text: 'text-blue-600 dark:text-blue-400', accent: 'bg-blue-500' },
     emerald: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-800', text: 'text-emerald-600 dark:text-emerald-400', accent: 'bg-emerald-500' },
@@ -49,29 +61,30 @@ export default function StatCard({
   const preview = getPreview();
 
   return (
-    <div className={`relative group rounded-2xl border-2 ${scheme.border} ${scheme.bg} p-4 transition-all hover:shadow-lg`}>
-      <div className={`absolute top-0 left-4 right-4 h-1 ${scheme.accent} rounded-b-full opacity-60`} />
+    <div className={`relative group rounded-xl border ${scheme.border} ${scheme.bg} ${compact ? 'p-2' : 'p-4'} transition-all hover:shadow-md`}>
+      {/* Indicator line */}
+      <div className={`absolute top-0 left-3 right-3 h-0.5 ${scheme.accent} rounded-b-full opacity-60`} />
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-3 pt-2">
-        <div className="flex items-center gap-2">
-          {Icon && <div className={`p-2 rounded-xl ${scheme.bg} ${scheme.text}`}><Icon size={16} /></div>}
+      <div className={`flex items-start justify-between ${compact ? 'mb-1.5' : 'mb-3'} pt-1`}>
+        <div className="flex items-center gap-1.5">
+          {Icon && <div className={`${compact ? 'p-1.5' : 'p-2'} rounded-lg ${scheme.bg} ${scheme.text}`}><Icon size={compact ? 12 : 16} /></div>}
           <div>
-            <label className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest block">{label}</label>
-            {tooltip && <div className="flex items-center gap-1 text-[8px] text-zinc-400 mt-0.5"><HelpCircle size={8} /><span>{tooltip}</span></div>}
+            <label className={`${compact ? 'text-[8px]' : 'text-[10px]'} font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest block`}>{label}</label>
           </div>
         </div>
       </div>
 
       {/* Input Group */}
-      <div className="flex rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
+      <div className={`flex rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm ${compact ? 'h-8' : ''}`}>
         <input
           type={type === 'abbrev' ? 'text' : 'number'}
           step="any"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder || "0"}
-          className="flex-1 px-4 py-3 text-lg font-bold bg-transparent outline-none dark:text-white placeholder-zinc-300 dark:placeholder-zinc-600 min-w-0"
+          onChange={(e) => handleChange(e.target.value)}
+          max={max}
+          placeholder={placeholder || (compact ? "0" : "0.00")}
+          className={`flex-1 px-3 bg-transparent outline-none dark:text-white placeholder-zinc-300 dark:placeholder-zinc-600 min-w-0 font-bold ${compact ? 'text-xs' : 'text-lg'}`}
         />
 
         {/* ✅ Unit Selector (Dropdown) */}
@@ -79,7 +92,7 @@ export default function StatCard({
           <select
             value={unit}
             onChange={(e) => onUnitChange(e.target.value)}
-            className="bg-zinc-50 dark:bg-zinc-800 border-l border-zinc-200 dark:border-zinc-700 px-2 text-xs font-black uppercase outline-none dark:text-zinc-400 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-center w-[70px]"
+            className={`bg-zinc-50 dark:bg-zinc-800 border-l border-zinc-200 dark:border-zinc-700 px-1 text-[9px] font-black uppercase outline-none dark:text-zinc-400 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-center ${compact ? 'w-[50px]' : 'w-[70px]'}`}
           >
             <optgroup label="Count">
               <option value="k">k</option>
@@ -93,17 +106,17 @@ export default function StatCard({
             </optgroup>
           </select>
         ) : type === 'percentage' && (
-          <div className="bg-zinc-50 dark:bg-zinc-800 border-l border-zinc-200 dark:border-zinc-700 px-4 flex items-center">
-            <span className="text-sm font-black text-zinc-500">%</span>
+          <div className="bg-zinc-50 dark:bg-zinc-800 border-l border-zinc-200 dark:border-zinc-700 px-3 flex items-center">
+            <span className={`${compact ? 'text-[10px]' : 'text-sm'} font-black text-zinc-500`}>%</span>
           </div>
         )}
       </div>
 
       {/* Preview */}
-      {preview && (
-        <div className="mt-2 flex items-center justify-end gap-1">
-          <span className="text-[9px] font-black text-zinc-400">→</span>
-          <span className={`text-[10px] font-black ${scheme.text}`}>{preview}</span>
+      {preview && !compact && (
+        <div className="mt-2 flex items-center justify-end gap-1 text-[9px]">
+          <span className="text-zinc-400">→</span>
+          <span className={`font-black ${scheme.text}`}>{preview}</span>
         </div>
       )}
     </div>

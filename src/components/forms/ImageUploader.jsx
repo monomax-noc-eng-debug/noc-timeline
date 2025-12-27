@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebaseConfig';
-import { ImagePlus, X, Loader2, Link as LinkIcon, UploadCloud, Check, AlertCircle } from 'lucide-react';
+import { ImagePlus, X, Loader2, Link as LinkIcon, UploadCloud, Check, AlertCircle, Maximize2 } from 'lucide-react';
+import ConfirmModal from '../ui/ConfirmModal';
+import ImagePreviewModal from '../ui/ImagePreviewModal';
+import { getDirectImageUrl } from '../../utils/helpers';
 
 export default function ImageUploader({ value, onChange, folder = 'uploads', placeholder = "Paste image URL..." }) {
   const [mode, setMode] = useState('url');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -71,10 +76,15 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
   };
 
   const handleRemove = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmRemove = () => {
     onChange('');
     setProgress(0);
     setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+    setShowConfirm(false);
   };
 
   return (
@@ -87,8 +97,8 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
             type="button"
             onClick={() => setMode('url')}
             className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${mode === 'url'
-                ? 'bg-white dark:bg-zinc-700 text-black dark:text-white shadow-sm scale-100'
-                : 'text-zinc-400 hover:text-zinc-600 hover:bg-black/5 dark:hover:bg-white/5 scale-95'
+              ? 'bg-white dark:bg-zinc-700 text-black dark:text-white shadow-sm scale-100'
+              : 'text-zinc-400 hover:text-zinc-600 hover:bg-black/5 dark:hover:bg-white/5 scale-95'
               }`}
           >
             <LinkIcon size={14} /> Link URL
@@ -97,8 +107,8 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
             type="button"
             onClick={() => setMode('upload')}
             className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${mode === 'upload'
-                ? 'bg-white dark:bg-zinc-700 text-black dark:text-white shadow-sm scale-100'
-                : 'text-zinc-400 hover:text-zinc-600 hover:bg-black/5 dark:hover:bg-white/5 scale-95'
+              ? 'bg-white dark:bg-zinc-700 text-black dark:text-white shadow-sm scale-100'
+              : 'text-zinc-400 hover:text-zinc-600 hover:bg-black/5 dark:hover:bg-white/5 scale-95'
               }`}
           >
             <UploadCloud size={14} /> Upload
@@ -119,9 +129,25 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
             `}
           >
             {uploading ? (
-              <div className="flex items-center gap-3 text-violet-600">
-                <Loader2 size={18} className="animate-spin" />
-                <span className="text-xs font-bold">Uploading... {progress}%</span>
+              <div className="w-full px-6 py-2 flex flex-col gap-2">
+                <div className="flex justify-between items-center px-1">
+                  <div className="flex items-center gap-2 text-violet-600">
+                    <Loader2 size={12} className="animate-spin" />
+                    <span className="text-[10px] font-black uppercase tracking-wider">Uploading...</span>
+                  </div>
+                  <span className="text-[10px] font-black text-violet-600">{progress}%</span>
+                </div>
+                {/* Progress Bar Container */}
+                <div className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200/50 dark:border-zinc-700/50">
+                  {/* Progress Bar Fill */}
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300 ease-out relative"
+                    style={{ width: `${progress}%` }}
+                  >
+                    {/* Glossy Effect */}
+                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-zinc-400 group-hover:text-violet-600 transition-colors">
@@ -154,8 +180,14 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
       ) : (
         // Preview Area (Compact)
         <div className="relative flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm animate-in fade-in zoom-in-95">
-          <div className="h-10 w-10 shrink-0 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+          <div
+            onClick={() => setPreviewUrl(value)}
+            className="group/thumb relative h-10 w-10 shrink-0 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 cursor-zoom-in"
+          >
+            <img src={getDirectImageUrl(value)} alt="Preview" className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-500" />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+              <Maximize2 size={12} />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300 truncate">{value}</p>
@@ -176,6 +208,21 @@ export default function ImageUploader({ value, onChange, folder = 'uploads', pla
           <AlertCircle size={12} /> {error}
         </p>
       )}
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        title="Delete Image?"
+        message="Are you sure you want to remove this image?"
+        onConfirm={confirmRemove}
+        isDanger={true}
+      />
+
+      <ImagePreviewModal
+        isOpen={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        imageUrl={previewUrl}
+      />
     </div>
   );
 }
