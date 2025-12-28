@@ -1,6 +1,6 @@
 import {
   collection, query, orderBy, onSnapshot, addDoc,
-  updateDoc, deleteDoc, doc, writeBatch, limit, getDocs
+  updateDoc, deleteDoc, doc, writeBatch, limit, getDocs, setDoc
 } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
@@ -73,7 +73,7 @@ export const incidentService = {
   /**
    * Create a new incident
    */
-  createIncident: async (data) => {
+  createIncident: async (data, customId = null) => {
     try {
       const payload = {
         ...data,
@@ -85,7 +85,13 @@ export const incidentService = {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      return await addDoc(collection(db, INCIDENTS_COL), payload);
+
+      if (customId) {
+        await setDoc(doc(db, INCIDENTS_COL, customId), payload);
+        return { id: customId };
+      } else {
+        return await addDoc(collection(db, INCIDENTS_COL), payload);
+      }
     } catch (error) {
       console.error("Create incident error:", error);
       throw new Error("Failed to create incident");
@@ -189,6 +195,31 @@ export const incidentService = {
     } catch (error) {
       console.error("Delete event error:", error);
       throw new Error("Failed to delete event");
+    }
+  },
+
+  /**
+   * Fetch all events for a specific incident (One-time fetch for export)
+   */
+  getEvents: async (incidentId) => {
+    try {
+      // ✅ Fetch without sorting first to avoid "Missing Index" errors
+      const q = query(collection(db, INCIDENTS_COL, incidentId, EVENTS_COL));
+      const snapshot = await getDocs(q);
+
+      const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // ✅ Sort in-memory (Date ASC -> Time ASC)
+      return events.sort((a, b) => {
+        const dateA = a.date || '1970-01-01';
+        const dateB = b.date || '1970-01-01';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (a.time || '00:00').localeCompare(b.time || '00:00');
+      });
+
+    } catch (error) {
+      console.error("Get events error:", error);
+      return [];
     }
   },
 

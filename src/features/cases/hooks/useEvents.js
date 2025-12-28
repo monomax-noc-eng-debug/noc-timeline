@@ -8,10 +8,8 @@ export const useEvents = (incidentId) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const currentUser = useStore((state) => state.currentUser);
-
   useEffect(() => {
-    if (!currentUser || !incidentId) {
+    if (!incidentId) {
       setEvents([]);
       setLoading(false);
       return;
@@ -31,7 +29,7 @@ export const useEvents = (incidentId) => {
     });
 
     return () => unsubscribe();
-  }, [incidentId, currentUser]);
+  }, [incidentId]);
 
   // ✅ 2. Use Memoized sorted events using pre-calculated timestamp
   const sortedEvents = useMemo(() => {

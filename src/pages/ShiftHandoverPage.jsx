@@ -1,7 +1,7 @@
 // src/pages/ShiftHandoverPage.jsx
 import React, { useState } from 'react';
 import {
-  FileText, Plus, Search, Filter, DownloadCloud,
+  FileText, Plus, Search, Filter, Download,
   X, Loader2, LayoutPanelTop
 } from 'lucide-react';
 
@@ -86,8 +86,12 @@ export default function ShiftHandoverPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={handleExportCSV} className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
-              <DownloadCloud size={20} />
+            <button
+              onClick={handleExportCSV}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-emerald-500 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all shadow-sm active:scale-95"
+              title="Export CSV"
+            >
+              <Download size={16} />
             </button>
             <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
             <button onClick={() => openForm()} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-[10px] font-black uppercase hover:opacity-90 active:scale-95 transition-all shadow-md">
@@ -142,7 +146,8 @@ export default function ShiftHandoverPage() {
       </div>
 
       <main className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">
+
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 size={32} className="text-blue-500 animate-spin mb-4" />
@@ -154,7 +159,7 @@ export default function ShiftHandoverPage() {
               <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">No transfer logs found</p>
             </div>
           ) : (
-            <div className="grid gap-4 pb-20">
+            <div className="space-y-2 pb-20">
               {filteredHistory.map(log => (
                 <ShiftLogItem
                   key={log.id}

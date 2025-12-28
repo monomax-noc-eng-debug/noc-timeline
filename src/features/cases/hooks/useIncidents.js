@@ -16,17 +16,8 @@ export const useIncidents = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterType, setFilterType] = useState('All');
 
-  // ดึงสถานะ User มาเช็ค
-  const currentUser = useStore((state) => state.currentUser);
-
   // Real-time subscription
   useEffect(() => {
-    if (!currentUser) {
-      setIncidents([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
 
     const unsubscribe = incidentService.subscribeIncidents((data) => {
@@ -35,7 +26,7 @@ export const useIncidents = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, []);
 
   // Filtered incidents
   const filteredIncidents = useMemo(() => {

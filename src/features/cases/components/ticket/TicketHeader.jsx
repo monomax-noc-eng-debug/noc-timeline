@@ -2,7 +2,7 @@ import React from 'react';
 import {
   ArrowLeft, FileText, AlertCircle,
   CheckCircle2, Clock, PlayCircle, XCircle,
-  AlertTriangle, Minus, Trash2, Settings, Zap
+  AlertTriangle, Minus, Trash2, Settings, Zap, Download, UploadCloud
 } from 'lucide-react';
 import { useTicketOptions } from '../../../../hooks/useTicketOptions';
 
@@ -12,7 +12,9 @@ export default function TicketHeader({
   onBack = () => { },
   onDelete = () => { },
   onEdit = () => { },
-  onGenerateReport = () => { }
+  onGenerateReport = () => { },
+  onExport = () => { },
+  onImport = () => { }
 }) {
   // Get ticket options from Firestore
   const { ticketOptions } = useTicketOptions();
@@ -155,6 +157,9 @@ export default function TicketHeader({
 
         {/* Right Section: Action Buttons */}
         <div className="flex items-center gap-0.5">
+          <button onClick={onExport} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-emerald-500 transition-all" title="Export CSV">
+            <Download size={14} />
+          </button>
           <button onClick={onGenerateReport} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-blue-500 transition-all" title="Report">
             <FileText size={14} />
           </button>

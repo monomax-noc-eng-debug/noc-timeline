@@ -1,17 +1,23 @@
 import React, { useState, useCallback } from 'react';
 import { useIncidents } from '../features/cases/hooks/useIncidents';
 import { useEvents } from '../features/cases/hooks/useEvents';
+import { useTicketLog } from '../features/ticket/hooks/useTicketLog';
 import { useStore } from '../store/useStore';
 import { incidentService } from '../services/incidentService';
 
 import CaseList from '../features/cases/CaseList';
 import CaseDetail from '../features/cases/CaseDetail';
+import LogDetailPanel from '../features/cases/LogDetailPanel';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import { useToast } from "@/hooks/use-toast";
 
 export default function TimelinePage() {
   const { currentUser } = useStore();
 
+  // Mode: 'incidents' | 'logs'
+  const [viewMode, setViewMode] = useState('incidents');
+
+  // --- 1. Incidents Data ---
   const {
     incidents,
     filteredIncidents,
@@ -28,6 +34,16 @@ export default function TimelinePage() {
 
   const { sortedEvents, loading: eventsLoading } = useEvents(selectedId);
 
+  // --- 2. Ticket Logs Data (Inbox) ---
+  const {
+    logs,
+    loading: logsLoading,
+    stats: logStats
+  } = useTicketLog();
+
+  const [selectedLog, setSelectedLog] = useState(null);
+
+  // --- 3. UI States ---
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -45,29 +61,63 @@ export default function TimelinePage() {
   // --- Actions: Incident ---
 
   const handleAddIncident = async () => {
-    if (!currentUser) {
-      showToast("Please login first!", 'error');
-      return;
-    }
-
     setSaving(true);
     try {
+      const creatorData = typeof currentUser === 'object' ? currentUser : { name: 'Admin' };
       const newDoc = await incidentService.createIncident({
         subject: 'New Incident',
         project: 'MONOMAX',
         status: 'Open',
         type: 'Incident',
         ticket: '',
-        createdBy: currentUser,
+        createdBy: creatorData,
         impact: '',
         root_cause: '',
         action: ''
       });
+      setViewMode('incidents');
       setSelectedId(newDoc.id);
       showToast('Case created');
     } catch (error) {
       console.error("Error creating incident:", error);
       showToast(error.message || 'Failed to create incident', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePromoteToIncident = async (log) => {
+    if (!log) return;
+    setSaving(true);
+
+    try {
+      const creatorData = typeof currentUser === 'object' ? currentUser : { name: 'System' };
+
+      // Map Log Data to Incident
+      const incidentData = {
+        subject: log.shortDesc || log.details || `Ticket #${log.ticketNumber}`,
+        ticket: log.ticketNumber || '',
+        project: 'MONOMAX', // Default
+        type: ['Incident', 'Request', 'Maintenance'].includes(log.type) ? log.type : 'Incident',
+        status: 'Open',
+        priority: log.severity || 'Medium',
+        createdBy: creatorData,
+        impact: '',
+        root_cause: log.details || '',
+        action: log.action || ''
+      };
+
+      const newDoc = await incidentService.createIncident(incidentData, log.ticketNumber);
+
+      showToast(`Ticket #${log.ticketNumber} promoted to Case`);
+
+      // Switch to Incident View
+      setViewMode('incidents');
+      setSelectedId(newDoc.id);
+
+    } catch (error) {
+      console.error("Error promoting log:", error);
+      showToast("Failed to promote ticket", 'error');
     } finally {
       setSaving(false);
     }
@@ -154,35 +204,69 @@ export default function TimelinePage() {
 
   // --- Export CSV ---
 
-  const handleExportCSV = (data) => {
+  // --- Export CSV ---
+
+  // --- Export CSV ---
+
+  const handleExportCSV = async (data) => {
     if (!data || data.length === 0) {
       showToast("No data to export", 'error');
       return;
     }
 
-    const headers = "Date,Project,Ticket,Type,Status,Subject,CreatedBy";
-    const csvContent = [
-      headers,
-      ...data.map(inc => {
-        const dateStr = inc.createdAt ? new Date(inc.createdAt).toLocaleDateString('en-GB') : '-';
-        const subjectEscaped = (inc.subject || '').replace(/"/g, '""');
-        return `"${dateStr}","${inc.project || ''}","${inc.ticket || ''}","${inc.type || ''}","${inc.status}","${subjectEscaped}","${inc.createdBy || ''}"`;
-      })
-    ].join("\n");
+    showToast("Preparing export...", "info");
 
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `TicketTimeline_Export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    try {
+      // ✅ Reverted to specific columns as requested
+      const headers = "IncidentDate,Project,Ticket,Type,Status,Subject,CreatedBy,EventDate,EventTime,EventDescription";
+      let csvRows = [];
 
-    showToast('CSV exported');
+      for (const inc of data) {
+        const incDate = inc.createdAt ? new Date(inc.createdAt).toLocaleDateString('en-GB') : '-';
+        // ✅ Fix: Remove newlines from Subject to prevent broken/tall rows in Excel
+        const subjectEscaped = (inc.subject || '').replace(/"/g, '""').replace(/\n/g, ' ');
+        const projectEscaped = (inc.project || '').replace(/"/g, '""').replace(/\n/g, ' ');
+        const ticketEscaped = (inc.ticket || '').replace(/"/g, '""').replace(/\n/g, ' ');
+        const typeEscaped = (inc.type || '').replace(/"/g, '""').replace(/\n/g, ' ');
+
+        // Removed Impact, RootCause, Action
+        const baseRow = `"${incDate}","${projectEscaped}","${ticketEscaped}","${typeEscaped}","${inc.status}","${subjectEscaped}","${inc.createdBy?.name || inc.createdBy || ''}"`;
+
+        // Fetch events for this incident
+        const events = await incidentService.getEvents(inc.id);
+
+        if (events.length > 0) {
+          events.forEach(ev => {
+            const evDate = ev.date ? new Date(ev.date).toLocaleDateString('en-GB') : '-';
+            const evTime = ev.time || '-';
+            const desc = (ev.desc || ev.title || '').replace(/"/g, '""').replace(/\n/g, ' ');
+            csvRows.push(`${baseRow},"${evDate}","${evTime}","${desc}"`);
+          });
+        } else {
+          // No events, just print incident line
+          csvRows.push(`${baseRow},"-","-","-"`);
+        }
+
+        // Separator row (adjusted for 10 columns -> 9 commas)
+        csvRows.push(",,,,,,,,,");
+      }
+
+      const csvContent = [headers, ...csvRows].join("\n");
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `TicketTimeline_Full_Export_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+
+      showToast('Export completed');
+    } catch (error) {
+      console.error("Export failed:", error);
+      showToast("Failed to export data", 'error');
+    }
   };
 
   return (
     <div className="w-full h-full flex overflow-hidden bg-zinc-50 dark:bg-black">
-
-
 
       {/* Confirm Modal */}
       <ConfirmModal
@@ -191,20 +275,35 @@ export default function TimelinePage() {
         {...confirmModal}
       />
 
-      {/* SECTION 1: Case List */}
+      {/* SECTION 1: Case List (Left Sidebar) */}
       <div className={`
         h-full border-r border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-[#050505] flex-shrink-0 transition-all duration-300
-        ${selectedId ? 'hidden lg:block lg:w-[350px]' : 'w-full lg:w-[350px]'}
+        ${(selectedId || selectedLog) ? 'hidden lg:block lg:w-[350px]' : 'w-full lg:w-[350px]'}
       `}>
         <CaseList
-          incidents={incidents}
+          // Incidents Props
           filteredIncidents={filteredIncidents}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => { setViewMode('incidents'); setSelectedId(id); }}
           onAddIncident={handleAddIncident}
           onDeleteIncident={handleDeleteIncident}
           onExportCSV={handleExportCSV}
           stats={stats}
+
+          // Inbox Props
+          logs={logs}
+          selectedLogId={selectedLog?.ticketNumber}
+          onSelectLog={setSelectedLog}
+          logsLoading={logsLoading}
+          logStats={logStats}
+
+          // Shared
+          viewMode={viewMode}
+          onViewModeChange={(mode) => {
+            setViewMode(mode);
+            if (mode === 'incidents') setSelectedLog(null);
+            if (mode === 'logs') setSelectedId(null);
+          }}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           filterStatus={filterStatus}
@@ -217,23 +316,31 @@ export default function TimelinePage() {
         />
       </div>
 
-      {/* SECTION 2: Case Detail */}
+      {/* SECTION 2: Detail Panel (Right Side) */}
       <div className={`
         h-full flex-1 min-w-0 overflow-hidden bg-white dark:bg-[#09090b] relative
-        ${selectedId ? 'block' : 'hidden lg:block'}
+        ${(selectedId || selectedLog || viewMode === 'incidents') ? 'block' : 'hidden lg:block'}
       `}>
-        <CaseDetail
-          incident={activeIncident ? { ...activeIncident, events: sortedEvents } : null}
-          isLoading={eventsLoading}
-          onBack={() => setSelectedId(null)}
-          onUpdateIncident={handleUpdateIncident}
-          onAddEvent={handleAddEvent}
-          onUpdateEvent={handleUpdateEvent}
-          onDeleteEvent={handleDeleteEvent}
-          onDeleteIncident={handleDeleteIncident}
-          onReorderEvent={handleReorderEvent}
-          saving={saving}
-        />
+        {viewMode === 'incidents' ? (
+          <CaseDetail
+            incident={activeIncident ? { ...activeIncident, events: sortedEvents } : null}
+            isLoading={eventsLoading}
+            onBack={() => setSelectedId(null)}
+            onUpdateIncident={handleUpdateIncident}
+            onAddEvent={handleAddEvent}
+            onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
+            onDeleteIncident={handleDeleteIncident}
+            onReorderEvent={handleReorderEvent}
+            saving={saving}
+          />
+        ) : (
+          <LogDetailPanel
+            log={selectedLog}
+            onAddToIncident={handlePromoteToIncident}
+            onClose={() => setSelectedLog(null)}
+          />
+        )}
       </div>
     </div>
   );

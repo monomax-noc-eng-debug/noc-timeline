@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { X, Copy, Download, Check, FileText, Activity, AlertTriangle, Workflow, Wrench, Clock, Calendar } from 'lucide-react';
+import { X, Copy, Check, FileText, Activity, AlertTriangle, Workflow, Wrench, Clock, Calendar } from 'lucide-react';
 import { getDirectImageUrl } from '../../utils/helpers';
 
 /**
@@ -131,15 +131,7 @@ export default function ReportModal({ isOpen, onClose, text, incident }) {
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Incident_Report_${parsedData?.meta['Ticket'] || 'Draft'}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+
 
   // Handle ESC key
   React.useEffect(() => {
@@ -301,12 +293,6 @@ export default function ReportModal({ isOpen, onClose, text, incident }) {
 
         {/* Footer */}
         <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] flex justify-end gap-3 z-10">
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <Download size={16} /> Download
-          </button>
           <button
             onClick={handleCopy}
             disabled={copied}

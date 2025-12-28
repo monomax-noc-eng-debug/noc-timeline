@@ -115,6 +115,33 @@ export default function CaseDetail({
         onDelete={() => onDeleteIncident(incident.id)}
         onEdit={() => setIsInfoModalOpen(true)}
         onGenerateReport={generateReport}
+        onExport={() => {
+          const headers = "IncidentDate,Project,Ticket,Type,Status,Subject,CreatedBy,EventDate,EventTime,EventDescription";
+          let csvRows = [];
+          const incDate = incident.createdAt ? new Date(incident.createdAt).toLocaleDateString('en-GB') : '-';
+          const subjectEscaped = (incident.subject || '').replace(/"/g, '""');
+          // Check if createdBy is object or string
+          const creator = typeof incident.createdBy === 'object' ? incident.createdBy.name : incident.createdBy || '';
+          const baseRow = `"${incDate}","${incident.project || ''}","${incident.ticket || ''}","${incident.type || ''}","${incident.status}","${subjectEscaped}","${creator}"`;
+
+          if (sortedEvents && sortedEvents.length > 0) {
+            sortedEvents.forEach(ev => {
+              const evDate = ev.date ? new Date(ev.date).toLocaleDateString('en-GB') : '-';
+              const evTime = ev.time || '-';
+              const desc = (ev.desc || ev.title || '').replace(/"/g, '""').replace(/\n/g, ' ');
+              csvRows.push(`${baseRow},"${evDate}","${evTime}","${desc}"`);
+            });
+          } else {
+            csvRows.push(`${baseRow},"-","-","-"`);
+          }
+
+          const csvContent = [headers, ...csvRows].join("\n");
+          const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `Incident_${incident.ticket || 'NO-ID'}_Export.csv`;
+          link.click();
+        }}
       />
 
       {/* Timeline Content */}
