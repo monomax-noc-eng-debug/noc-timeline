@@ -1,0 +1,1 @@
+import{c as o}from"./index-DK6B-WCw.js";const c=[["path",{d:"M20 6 9 17l-5-5",key:"1gmf2c"}]],h=o("check",c);const e=[["path",{d:"m15 18-6-6 6-6",key:"1wnfg3"}]],s=o("chevron-left",e);const t=[["path",{d:"m9 18 6-6-6-6",key:"mthhwq"}]],a=o("chevron-right",t);export{s as C,a,h as b};
