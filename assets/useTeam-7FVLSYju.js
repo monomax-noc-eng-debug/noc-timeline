@@ -1,0 +1,1 @@
+import{r as e}from"./index-DAanvQcz.js";import{c}from"./configService-hzZxIssI.js";function m(){const[t,s]=e.useState([]),[r,a]=e.useState(!0);return e.useEffect(()=>{const o=c.subscribeTeam(u=>{s(u),a(!1)});return()=>o()},[]),{team:t,loading:r}}export{m as u};
