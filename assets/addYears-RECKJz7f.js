@@ -1,0 +1,1 @@
+import{t as s,c as n}from"./format-B568ns5f.js";import{a as i}from"./addMonths-BfoHT1ak.js";function d(r,t,a){const e=s(r,a?.in);return isNaN(t)?n(a?.in||r,NaN):(t&&e.setDate(e.getDate()+t),e)}function f(r,t,a){return i(r,t*12,a)}export{f as a,d as b};
