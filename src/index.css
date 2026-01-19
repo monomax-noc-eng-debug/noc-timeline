@@ -1,0 +1,364 @@
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap'); */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Prompt', system-ui, -apple-system, sans-serif;
+  --font-prompt: 'Prompt', sans-serif;
+
+  /* Global Color Overrides to force theme everywhere */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Redirect indigo to Outlook Blue */
+  --color-indigo-50: #deecf9;
+  --color-indigo-100: #c7e0f4;
+  --color-indigo-400: #2b88d8;
+  --color-indigo-500: #0078D4;
+  --color-indigo-600: #0078D4;
+  --color-indigo-700: #106EBE;
+  --color-indigo-800: #005a9e;
+  --color-indigo-900: #004578;
+
+  /* Redirect zinc to Outlook Neutrals (Standard Grays) */
+  --color-zinc-50: #faf9f8;
+  --color-zinc-100: #f3f2f1;
+  --color-zinc-200: #e1dfdd;
+  --color-zinc-300: #c8c6c4;
+  --color-zinc-400: #a19f9d;
+  --color-zinc-500: #605e5c;
+  --color-zinc-600: #323130;
+  --color-zinc-700: #201f1e;
+  --color-zinc-800: #1b1a19;
+  --color-zinc-900: #11100f;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* Global Reset */
+:root {
+  color-scheme: light dark;
+  font-family: 'Prompt', sans-serif;
+
+  /* --- LIGHT MODE: OUTLOOK NEUTRAL --- */
+  --background: #f0f2f5;
+  /* Neutral Light Gray */
+  --foreground: #201f1e;
+  /* Neural Dark */
+
+  --card: #ffffff;
+  --card-foreground: #201f1e;
+
+  --popover: #ffffff;
+  --popover-foreground: #201f1e;
+
+  /* Primary: Outlook Blue */
+  --primary: #0078D4;
+  --primary-foreground: #ffffff;
+
+  /* Secondary: Neutral */
+  --secondary: #edebe9;
+  --secondary-foreground: #201f1e;
+
+  --muted: #f3f2f1;
+  --muted-foreground: #605e5c;
+
+  /* Accent: Outlook Blue Light */
+  --accent: #eff6fc;
+  --accent-foreground: #0078D4;
+
+  --destructive: #a80000;
+  --destructive-foreground: #ffffff;
+
+  --border: #e1dfdd;
+  --input: #ffffff;
+  --ring: #0078D4;
+
+  --radius: 0.5rem;
+  /* Standard rounded-lg */
+
+  --chart-1: #0078D4;
+  --chart-2: #004578;
+  --chart-3: #005a9e;
+  --chart-4: #106EBE;
+  --chart-5: #2b88d8;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #201f1e;
+  --sidebar-primary: #0078D4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eff6fc;
+  --sidebar-accent-foreground: #0078D4;
+  --sidebar-border: #e1dfdd;
+  --sidebar-ring: #0078D4;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* --- DARK MODE: OUTLOOK DARK --- */
+  --background: #11100f;
+  /* Outlook Black */
+  --foreground: #ffffff;
+
+  --card: #252423;
+  /* Outlook Dark Gray */
+  --card-foreground: #ffffff;
+
+  --popover: #252423;
+  --popover-foreground: #ffffff;
+
+  /* Primary: Outlook Blue */
+  --primary: #4ba0e8;
+  /* Lighter Blue for Dark Mode */
+  --primary-foreground: #000000;
+
+  /* Secondary: Neutral Dark */
+  --secondary: #3b3a39;
+  --secondary-foreground: #ffffff;
+
+  --muted: #3b3a39;
+  --muted-foreground: #a19f9d;
+
+  /* Accent: Dark Blue Low Opacity */
+  --accent: #0078D4;
+  /* Darker accent background */
+  --accent-foreground: #ffffff;
+
+  --destructive: #e81123;
+  --destructive-foreground: #ffffff;
+
+  --border: #3b3a39;
+  /* Subtle border */
+  --input: #252423;
+  --ring: #4ba0e8;
+
+  --chart-1: #4ba0e8;
+  --chart-2: #2b88d8;
+  --chart-3: #0078D4;
+  --chart-4: #106EBE;
+  --chart-5: #004578;
+
+  --sidebar: #1b1a19;
+  /* Slightly lighter than background */
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #4ba0e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #292827;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #3b3a39;
+  --sidebar-ring: #4ba0e8;
+}
+
+/* Scrollbar Utilities */
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply bg-zinc-300 dark:bg-zinc-800 rounded-full;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-400 dark:bg-zinc-700;
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* react-day-picker Calendar Fixes */
+[data-slot="calendar"] {
+  --rdp-cell-size: 32px;
+}
+
+[data-slot="calendar"] .rdp-months {
+  display: flex;
+  gap: 1rem;
+}
+
+[data-slot="calendar"] .rdp-month {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-slot="calendar"] .rdp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+[data-slot="calendar"] .rdp-button_previous,
+[data-slot="calendar"] .rdp-button_next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+[data-slot="calendar"] .rdp-weekdays {
+  display: flex;
+  gap: 0;
+}
+
+[data-slot="calendar"] .rdp-weekday {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #71717a;
+}
+
+[data-slot="calendar"] .rdp-week {
+  display: flex;
+  gap: 0;
+  margin-top: 2px;
+}
+
+[data-slot="calendar"] .rdp-day {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+[data-slot="calendar"] .rdp-day button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  transition: all 0.15s ease;
+}
+
+[data-slot="calendar"] .rdp-day_today button {
+  font-weight: 600;
+}
+
+.dark [data-slot="calendar"] .rdp-weekday {
+  color: #a1a1aa;
+}
+
+/* FullCalendar Fixes */
+.fc {
+  --fc-border-color: rgba(229, 231, 235, 0.5);
+  --fc-today-bg-color: rgba(0, 0, 0, 0.03);
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #e5e7eb;
+  --fc-button-text-color: #374151;
+  --fc-button-hover-bg-color: #f9fafb;
+  --fc-button-hover-border-color: #d1d5db;
+  --fc-button-active-bg-color: #f3f4f6;
+}
+
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.08);
+  --fc-today-bg-color: rgba(255, 255, 255, 0.05);
+  --fc-page-bg-color: #000;
+  --fc-button-bg-color: #18181b;
+  --fc-button-border-color: #27272a;
+  --fc-button-text-color: #e4e4e7;
+  --fc-button-hover-bg-color: #27272a;
+  --fc-button-hover-border-color: #3f3f46;
+  --fc-button-active-bg-color: #27272a;
+  color: #a1a1aa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    font-weight: 500;
+    /* Increased from 400 to 500 for bolder look */
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen transition-colors duration-300 font-sans;
+    font-weight: 500;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-title {
+    font-family: var(--font-prompt);
+    font-weight: 900;
+    /* Maximum weight for headings */
+    letter-spacing: -0.01em;
+  }
+
+  /* Specific UI overrides to ensure consistency */
+  input,
+  button,
+  textarea,
+  select,
+  span,
+  p,
+  div,
+  a {
+    font-weight: 500;
+  }
+
+  /* Optional: Keep mono for code/IDs if needed */
+  code,
+  pre,
+  .font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+}
