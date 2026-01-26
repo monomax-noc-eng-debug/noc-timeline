@@ -11,10 +11,11 @@ export const shiftService = {
   /**
    * Subscribe to handover logs in real-time
    * @param {Function} callback - Function to receive data updates
+   * @param {Function} onError - Optional error callback
    * @param {number} limitCount - Maximum number of records to fetch
    * @returns {Function} Unsubscribe function
    */
-  subscribeHandovers: (callback, limitCount = 50) => {
+  subscribeHandovers: (callback, onError = null, limitCount = 50) => {
     const q = query(
       collection(db, SHIFT_COL),
       orderBy("date", "desc"),
@@ -32,7 +33,8 @@ export const shiftService = {
       callback(data);
     }, (error) => {
       console.error("Firestore subscription error:", error);
-      callback([]);
+      if (onError) onError(error);
+      callback([]); // Return empty to prevent UI hang
     });
   },
 
@@ -124,16 +126,18 @@ export const shiftService = {
    */
   deleteHandover: async (id, images = []) => {
     try {
-      // 1. Delete associated images from Drive if they exist
+      // 1. Delete associated images from Drive - AWAIT to ensure cleanup
       if (images && images.length > 0) {
-        // We trigger deletes in parallel but don't strictly block Firestore deletion if one fails
-        Promise.all(images.map(img =>
-          // Handle both full object {id, url} or just id string (legacy safety)
-          // deleteFileFromDrive handles URL or ID string.
-          import('../utils/driveUpload').then(({ deleteFileFromDrive }) =>
+        try {
+          const { deleteFileFromDrive } = await import('../utils/driveUpload');
+          await Promise.all(images.map(img =>
             deleteFileFromDrive(img.id || img.url || img)
-          )
-        )).catch(err => console.error("Error cleaning up images:", err));
+          ));
+        } catch (err) {
+          // Log but don't block Firestore deletion - images can be orphaned
+          // but document should still be deletable
+          console.error("Error cleaning up images:", err);
+        }
       }
 
       // 2. Delete Firestore Document

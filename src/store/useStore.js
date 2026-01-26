@@ -6,6 +6,13 @@
  * - currentUser is NOT persisted to localStorage for security
  * - User session should be managed via Firebase Auth (AuthProvider)
  * - Only safe, non-sensitive data is persisted (darkMode, ticketConfig)
+ * 
+ * Hydration Timing Note:
+ * - currentUser starts as null during initial page load
+ * - AuthProvider sets currentUser AFTER Firebase auth state is resolved
+ * - Components should check for loading state (via AuthProvider) before
+ *   assuming unauthenticated state based on null currentUser
+ * - The AuthProvider shows a loading screen until auth state is confirmed
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -25,6 +32,8 @@ export const useStore = create(
     (set) => ({
       // ========================
       // 1. User Info (NOT persisted for security)
+      // NOTE: This is null until AuthProvider confirms Firebase auth state.
+      // Do not use this to determine auth status without checking AuthProvider loading state.
       // ========================
       currentUser: null,
       setCurrentUser: (user) => set({ currentUser: user }),

@@ -6,7 +6,7 @@ import {
   Calendar, RefreshCw, Zap, LayoutList, Loader2, Database, LayoutGrid,
   FileSpreadsheet, Eye, EyeOff, CheckCircle2, Clock, Radio, Timer, Bell,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, SlidersHorizontal,
-  Edit3, Trash2
+  Edit3, Trash2, MoreHorizontal, Filter, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -17,6 +17,14 @@ import { useMatches } from '../../features/matches/hooks/useMatches';
 import { getMatchStatus } from '../../utils/matchStatus';
 import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DatePicker } from '../../components/forms/DatePicker';
 import { formatDateAPI } from '../../utils/formatters';
 import { useStore } from '../../store/useStore';
@@ -31,6 +39,7 @@ import LiveClock from './components/LiveClock';
 const MatchViewModal = lazy(() => import('../../features/matches/components/MatchViewModal'));
 const GoogleSyncModal = lazy(() => import('../../features/matches/components/GoogleSyncModal'));
 const DataPreviewPanel = lazy(() => import('../../features/matches/components/DataPreviewPanel'));
+const MatchStatPanel = lazy(() => import('../../features/match-stats/MatchStatPanel'));
 
 // Helper: Check if match is finished (hasEndStat OR time has passed)
 const isMatchFinished = (match) => {
@@ -122,6 +131,15 @@ export default function HistoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Match Stats Panel State (Split View)
+  const [selectedStatMatch, setSelectedStatMatch] = useState(null);
+  const [statPanelType, setStatPanelType] = useState('START'); // START or END
+
+  // Clear stat selection when changing view mode
+  useEffect(() => {
+    setSelectedStatMatch(null);
+  }, [viewMode]);
 
   // CRUD States
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -300,10 +318,18 @@ export default function HistoryPage() {
   }, [filteredMatches, currentPage, itemsPerPage]);
 
   // Click row → show in modal
+  // Click row → show in modal
   const handleMatchClick = useCallback((match) => {
-    setSelectedMatch(match);
-    setIsModalOpen(true);
-  }, []);
+    // If in Calendar mode, open detail modal
+    if (viewMode === 'calendar') {
+      setSelectedMatch(match);
+      setIsModalOpen(true);
+    } else {
+      // In List mode, open Stats Split View
+      setSelectedStatMatch(match);
+      setStatPanelType('START');
+    }
+  }, [viewMode]);
 
   // CRUD Handlers
   const handleEditClick = useCallback((match) => {
@@ -353,7 +379,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-zinc-50 dark:bg-black overflow-hidden">
+    <div className="h-full flex flex-col bg-zinc-50 dark:bg-black overflow-hidden relative">
       <Suspense fallback={null}>
         {isModalOpen && <MatchViewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} matchData={selectedMatch} />}
         {isSyncModalOpen && <GoogleSyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} onSyncComplete={handleRefresh} />}
@@ -362,14 +388,15 @@ export default function HistoryPage() {
 
       {/* --- HEADER --- */}
       <div className="shrink-0 px-4 py-2 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="w-full flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+        <div className="w-full flex items-center justify-between gap-3 overflow-x-auto pb-1">
 
           {/* Left: Identity & Clock */}
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-[#0078D4] text-white rounded-md flex items-center justify-center shadow-sm shrink-0">
+                <CalendarIcon size={18} />
               </div>
-              <div className="hidden lg:block">
+              <div className="hidden xl:block">
                 <h1 className="text-sm font-bold text-zinc-900 dark:text-white leading-none tracking-tight">SCHEDULE</h1>
               </div>
             </div>
@@ -427,44 +454,82 @@ export default function HistoryPage() {
           {/* Spacer if not in list mode to push right items */}
           {viewMode !== 'list' && <div className="flex-1" />}
 
-          {/* Right: Controls & Actions */}
+          {/* Right: Controls & Actions (Responsive) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Hide Finished */}
-            <button
-              onClick={() => setHideFinished(!hideFinished)}
-              className={cn(
-                "h-8 px-2.5 flex items-center gap-1.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all border shrink-0",
-                hideFinished
-                  ? "bg-amber-50 text-amber-600 border-amber-200"
-                  : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
-              )}
-              title={hideFinished ? "Show Finished" : "Hide Finished"}
-            >
-              {hideFinished ? <EyeOff size={14} /> : <Eye size={14} />}
-              <span className="hidden xl:inline">{hideFinished ? 'Hidden' : 'Show All'}</span>
-            </button>
 
-            {/* Standard Actions */}
-            <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-md shrink-0">
-              <button onClick={() => setIsSyncModalOpen(true)} className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-white hover:text-[#0078D4] hover:shadow-sm transition-all">
-                <Database size={14} />
+            {/* DESKTOP CONTROLS (Hidden on mobile/tablet) */}
+            <div className="hidden lg:flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-200/50 dark:border-zinc-800">
+              {/* Hide Finished Toggle */}
+              <button
+                onClick={() => setHideFinished(!hideFinished)}
+                className={cn(
+                  "h-7 px-2.5 flex items-center gap-1.5 rounded-md text-[9px] font-bold uppercase tracking-wide transition-all",
+                  hideFinished
+                    ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800"
+                )}
+                title={hideFinished ? "Show Finished" : "Hide Finished"}
+              >
+                {hideFinished ? <EyeOff size={12} /> : <Eye size={12} />}
+                <span className="hidden xl:inline">{hideFinished ? 'Hidden' : 'Show All'}</span>
               </button>
-              <button onClick={() => setIsPreviewOpen(true)} disabled={!matches?.length} className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-white hover:text-[#0078D4] hover:shadow-sm transition-all disabled:opacity-50">
-                <FileSpreadsheet size={14} />
+
+              <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-700 mx-0.5" />
+
+              {/* Sync & Preview */}
+              <button onClick={() => setIsSyncModalOpen(true)} className="h-7 w-7 flex items-center justify-center rounded hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-[#0078D4] transition-all" title="Sync">
+                <Database size={13} />
+              </button>
+              <button onClick={() => setIsPreviewOpen(true)} disabled={!matches?.length} className="h-7 w-7 flex items-center justify-center rounded hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-[#0078D4] disabled:opacity-50 transition-all" title="Export">
+                <FileSpreadsheet size={13} />
+              </button>
+
+              <div className="w-px h-3 bg-zinc-300 dark:bg-zinc-700 mx-0.5" />
+
+              {/* View Switch */}
+              <button onClick={() => handleModeSwitch('list')} className={cn("h-7 w-7 flex items-center justify-center rounded transition-all", viewMode === 'list' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#0078D4]' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300')}>
+                <LayoutList size={13} />
+              </button>
+              <button onClick={() => handleModeSwitch('calendar')} className={cn("h-7 w-7 flex items-center justify-center rounded transition-all", viewMode === 'calendar' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#0078D4]' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300')}>
+                <Calendar size={13} />
               </button>
             </div>
 
-            <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-700 mx-1 hidden sm:block" />
-
-            {/* View Switch */}
-            <div className="flex bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-md shrink-0">
-              <button onClick={() => handleModeSwitch('list')} className={cn("h-7 w-7 flex items-center justify-center rounded transition-all", viewMode === 'list' ? 'bg-white shadow-sm text-[#0078D4]' : 'text-zinc-500 hover:text-zinc-700')}>
-                <LayoutList size={14} />
-              </button>
-              <button onClick={() => handleModeSwitch('calendar')} className={cn("h-7 w-7 flex items-center justify-center rounded transition-all", viewMode === 'calendar' ? 'bg-white shadow-sm text-[#0078D4]' : 'text-zinc-500 hover:text-zinc-700')}>
-                <Calendar size={14} />
-              </button>
+            {/* MOBILE MENU (Visible on mobile/tablet) */}
+            <div className="lg:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-8 w-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                    <MoreHorizontal size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>View Options</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setHideFinished(!hideFinished)}>
+                    {hideFinished ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    {hideFinished ? 'Show Finished' : 'Hide Finished'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Layout</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleModeSwitch('list')}>
+                    <LayoutList className="mr-2 h-4 w-4" /> List View
+                    {viewMode === 'list' && <CheckCircle2 className="ml-auto h-3 w-3" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleModeSwitch('calendar')}>
+                    <Calendar className="mr-2 h-4 w-4" /> Calendar View
+                    {viewMode === 'calendar' && <CheckCircle2 className="ml-auto h-3 w-3" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsSyncModalOpen(true)}>
+                    <Database className="mr-2 h-4 w-4" /> Sync Data
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsPreviewOpen(true)} disabled={!matches?.length}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Export / Preview
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+
 
             {/* Manual Add */}
             {canEdit && (
@@ -481,8 +546,11 @@ export default function HistoryPage() {
       </div>
       {/* --- SPLIT-VIEW CONTENT --- */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT PANEL: Table List */}
-        <div className="w-full h-full flex flex-col overflow-hidden transition-all">
+        {/* LEFT PANEL: Table List or Calendar */}
+        <div className={cn(
+          "h-full flex flex-col overflow-hidden transition-all duration-300",
+          selectedStatMatch ? "hidden lg:flex lg:w-[40%]" : "w-full"
+        )}>
           {loading && (!matches || matches.length === 0) ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 size={32} className="animate-spin text-zinc-400" />
@@ -563,10 +631,26 @@ export default function HistoryPage() {
                               {match.channel}
                             </span>
                           )}
-                          {/* Stats Indicators */}
-                          <div className="flex items-center gap-1 ml-auto">
-                            <span className={cn("w-1.5 h-1.5 rounded-full", match.hasStartStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')} title="Start Stats" />
-                            <span className={cn("w-1.5 h-1.5 rounded-full", match.hasEndStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')} title="End Stats" />
+                          {/* Stats Indicators - Interactive */}
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedStatMatch(match);
+                                setStatPanelType('START');
+                              }}
+                              className={cn("w-2 h-2 rounded-full transition-all hover:scale-125", match.hasStartStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')}
+                              title="Match Stats"
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMatch(match);
+                                setIsModalOpen(true);
+                              }}
+                              className={cn("w-2 h-2 rounded-full transition-all hover:scale-125", match.hasEndStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')}
+                              title="Match Details"
+                            />
                           </div>
                         </div>
                       </div>
@@ -651,9 +735,27 @@ export default function HistoryPage() {
                               ) : '-'}
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center justify-center gap-1.5 opacity-30 group-hover:opacity-100 transition-opacity">
-                                <span className={cn("w-1.5 h-1.5 rounded-full", match.hasStartStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')} title="Start Stats" />
-                                <span className={cn("w-1.5 h-1.5 rounded-full", match.hasEndStat ? 'bg-[#0078D4]' : 'bg-zinc-300 dark:bg-zinc-700')} title="End Stats" />
+                              <div className="flex items-center justify-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                                {/* First Dot: Match Stats */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedStatMatch(match);
+                                    setStatPanelType('START');
+                                  }}
+                                  className={cn("w-2 h-2 rounded-full transition-all hover:scale-150", match.hasStartStat ? 'bg-[#0078D4] hover:bg-[#106EBE]' : 'bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400')}
+                                  title="Match Stats"
+                                />
+                                {/* Second Dot: Match Detail */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMatch(match);
+                                    setIsModalOpen(true);
+                                  }}
+                                  className={cn("w-2 h-2 rounded-full transition-all hover:scale-150", match.hasEndStat ? 'bg-[#0078D4] hover:bg-[#106EBE]' : 'bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400')}
+                                  title="Match Details"
+                                />
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
@@ -867,6 +969,20 @@ export default function HistoryPage() {
             </div>
           )}
         </div>
+
+        {/* RIGHT PANEL: Match Stats (Split View) */}
+        {selectedStatMatch && (
+          <div className="flex-1 h-full bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-xl z-20 animate-in slide-in-from-right-10 duration-300">
+            <Suspense fallback={<div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#0078D4]" /></div>}>
+              <MatchStatPanel
+                matchData={selectedStatMatch}
+                initialStatType={statPanelType}
+                onClose={() => setSelectedStatMatch(null)}
+                canEdit={canEdit}
+              />
+            </Suspense>
+          </div>
+        )}
       </div>
 
 

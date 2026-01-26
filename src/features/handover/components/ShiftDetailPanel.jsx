@@ -51,13 +51,13 @@ const ShiftDetailPanel = memo(({
       <div className="shrink-0 z-20 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 p-6 space-y-4 shadow-sm">
 
         {/* Top Row: Toolbar (Shift Badge, Breadcrumbs, Actions) */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={onClose} className="lg:hidden p-2 -ml-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"><X size={20} /></button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider",
+                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold border uppercase tracking-wider",
                 log.shift === 'Morning'
                   ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
                   : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
@@ -65,31 +65,32 @@ const ShiftDetailPanel = memo(({
                 {log.shift === 'Morning' ? <Sun size={12} strokeWidth={2.5} /> : <Moon size={12} strokeWidth={2.5} />}
                 {log.shift}
               </span>
-              <span className="text-zinc-300">•</span>
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">{dateLabel}</span>
+              <span className="hidden sm:inline text-zinc-300">•</span>
+              <span className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">{dateLabel}</span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {canEdit && (
               <>
-                <button onClick={() => onEdit(log)} className="p-2 text-zinc-500 hover:text-[#0078D4] hover:bg-[#0078D4]/5 rounded-lg transition-colors" title="Edit"><Edit size={18} /></button>
-                <button onClick={() => onDelete(log)} className="p-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors" title="Delete"><Trash2 size={18} /></button>
+                <button onClick={() => onEdit(log)} className="p-1.5 sm:p-2 text-zinc-500 hover:text-[#0078D4] hover:bg-[#0078D4]/5 rounded-lg transition-colors" title="Edit"><Edit size={16} /></button>
+                <button onClick={() => onDelete(log)} className="p-1.5 sm:p-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>
               </>
             )}
-            <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-2" />
+            <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-1 sm:mx-2" />
             <button
               onClick={() => onAcknowledge && onAcknowledge(log, currentUser?.name)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-md transition-all shadow-sm border",
+                "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wide rounded-md transition-all shadow-sm border",
                 isAcked
                   ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
-                  : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-black dark:border-white"
+                  : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-black dark:border-white active:scale-95"
               )}
             >
               <CheckCircle2 size={14} className={isAcked ? "fill-emerald-600 text-white" : ""} />
-              {isAcked ? 'Acknowledged' : 'Acknowledge'}
+              <span className="hidden sm:inline">{isAcked ? 'Acknowledged' : 'Acknowledge'}</span>
+              <span className="sm:hidden">{isAcked ? 'Acked' : 'Ack'}</span>
             </button>
           </div>
         </div>
@@ -131,7 +132,7 @@ const ShiftDetailPanel = memo(({
       </div>
 
       {/* --- SCROLLABLE BODY --- */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 bg-zinc-50/50 dark:bg-[#0c0c0e]">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8 bg-zinc-50/50 dark:bg-zinc-950">
 
         {/* Properties Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800/50">

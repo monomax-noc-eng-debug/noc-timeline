@@ -6,23 +6,15 @@ import { useStore } from '../../store/useStore';
 import { useToast } from '@/hooks/use-toast';
 import PageLoader from '../ui/PageLoader';
 import { KeyRound, RefreshCw, AlertCircle } from 'lucide-react';
+import { ticketLogService } from '../../services/ticketLogService';
 
 const AuthContext = createContext(null);
 
+const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 Hour
+const SCHEDULED_LOGOUT_TIME = { hour: 0, minute: 1 }; // 00:01
+
 /**
  * AuthProvider: Handles Firebase auth state and session management
- * 
- * Key Features:
- * - Listens to onAuthStateChanged for real-time session persistence
- * - Auto-restores user session from Firebase Auth (not localStorage)
- * - Validates user profile exists and is active in Firestore
- * - Clears invalid/expired sessions automatically
- * - Shows appropriate notifications for session events
- * 
- * Security:
- * - User data is fetched from Firestore on each session restore
- * - No sensitive data stored in localStorage
- * - Session validity controlled by Firebase Auth
  */
 export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
@@ -31,6 +23,8 @@ export function AuthProvider({ children }) {
   // Use refs to track state without causing re-renders or stale closures
   const hasShownAutoLoginRef = useRef(false);
   const previousUserRef = useRef(null);
+  const inactivityTimerRef = useRef(null);
+  const eventsRef = useRef(['mousemove', 'keydown', 'mousedown', 'touchstart']);
 
   // Get store actions (stable references)
   const setCurrentUser = useStore((state) => state.setCurrentUser);
@@ -40,7 +34,6 @@ export function AuthProvider({ children }) {
 
   /**
    * Fetch user profile from Firestore
-   * Returns user data if valid, null if not found or inactive
    */
   const fetchUserProfile = useCallback(async (firebaseUser) => {
     try {
@@ -84,12 +77,12 @@ export function AuthProvider({ children }) {
     toast({
       title: (
         <span className="flex items-center gap-2">
-          <RefreshCw size={16} className="text-primary" />
-          Session Restored
+          <RefreshCw size={16} className="text-emerald-500 animate-spin-slow" />
+          Session Active
         </span>
       ),
       description: `Welcome back, ${userName}!`,
-      className: 'bg-gradient-to-r from-[#0078D4] to-[#106EBE] text-white border-none'
+      className: 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'
     });
   }, [toast]);
 
@@ -112,6 +105,16 @@ export function AuthProvider({ children }) {
         title: 'Session Expired',
         description: 'Please login again to continue.',
         className: 'bg-amber-600 text-white border-none'
+      },
+      AUTO_LOGOUT: {
+        title: 'Inactivity Logout',
+        description: 'You have been logged out due to inactivity.',
+        className: 'bg-zinc-800 text-white border-none'
+      },
+      SCHEDULED_LOGOUT: {
+        title: 'Daily System Refresh',
+        description: 'System refreshing session for the new day.',
+        className: 'bg-[#0078D4] text-white border-none'
       }
     };
 
@@ -125,6 +128,54 @@ export function AuthProvider({ children }) {
       });
     }
   }, [toast]);
+
+  // --- Auto Logout Logic ---
+
+  const handleLogout = useCallback((reason = 'SESSION_EXPIRED') => {
+    auth.signOut().then(() => {
+      logout();
+      showErrorToast(reason);
+      previousUserRef.current = null;
+    });
+  }, [logout, showErrorToast]);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (auth.currentUser) {
+      inactivityTimerRef.current = setTimeout(() => {
+        handleLogout('AUTO_LOGOUT');
+      }, INACTIVITY_TIMEOUT);
+    }
+  }, [handleLogout]);
+
+  useEffect(() => {
+    const handleActivity = () => resetInactivityTimer();
+
+    eventsRef.current.forEach(event => window.addEventListener(event, handleActivity));
+
+    // Initial start
+    resetInactivityTimer();
+
+    // Check for scheduled logout (00:01) every minute
+    const scheduleInterval = setInterval(() => {
+      const now = new Date();
+      if (now.getHours() === SCHEDULED_LOGOUT_TIME.hour && now.getMinutes() === SCHEDULED_LOGOUT_TIME.minute) {
+        // Add a small guard to prevent multiple triggers within the same minute if re-renders happen
+        // But since handleLogout signs out, this component might unmount or state changes, 
+        // stopping the interval effectively if user is logged out.
+        if (auth.currentUser) {
+          handleLogout('SCHEDULED_LOGOUT');
+        }
+      }
+    }, 60000);
+
+    return () => {
+      eventsRef.current.forEach(event => window.removeEventListener(event, handleActivity));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      clearInterval(scheduleInterval);
+    };
+  }, [resetInactivityTimer, handleLogout]);
+
 
   /**
    * Main auth state listener effect
@@ -166,6 +217,20 @@ export function AuthProvider({ children }) {
             showSessionRestoredToast(userData.name);
           }
 
+          // --- TRIGGER AUTO SYNC ---
+          // Run in background, don't await blocking UI
+          ticketLogService.checkAndSyncTickets().then((res) => {
+            if (res.synced) {
+              toast({
+                title: "Daily Sync Complete",
+                description: `Synced ${res.count} tickets from Google Sheet.`,
+                className: "bg-emerald-500 text-white border-none"
+              });
+            }
+          });
+
+          resetInactivityTimer();
+
         } else {
           // No Firebase session
           const hadPreviousUser = previousUserRef.current !== null;
@@ -174,10 +239,10 @@ export function AuthProvider({ children }) {
           previousUserRef.current = null;
           hasShownAutoLoginRef.current = false;
 
-          // Show session expired only if there was a previous user
-          if (hadPreviousUser) {
-            showErrorToast('SESSION_EXPIRED');
-          }
+          // Show session expired only if there was a previous user (and not manually logged out just now)
+          // We can rely on the handleLogout's toast if it was triggered by that. 
+          // But if it comes from pure firebase expiry, we might need this.
+          // For now, let's suppress duplicate toasts if possible, but keeping safety.
         }
       } catch (error) {
         console.error('[AuthProvider] Auth state error:', error);
@@ -196,7 +261,7 @@ export function AuthProvider({ children }) {
       isMounted = false;
       unsubscribe();
     };
-  }, [fetchUserProfile, setCurrentUser, logout, showSessionRestoredToast, showErrorToast]);
+  }, [fetchUserProfile, setCurrentUser, logout, showSessionRestoredToast, showErrorToast, resetInactivityTimer, toast]);
 
   // Show loading screen while checking auth state
   if (loading) {
@@ -231,7 +296,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated: previousUserRef.current !== null }}>
+    <AuthContext.Provider value={{ isAuthenticated: previousUserRef.current !== null, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,8 +24,7 @@ const menuGroups = [
   {
     title: "Controls",
     items: [
-      { to: "/tickets", icon: Archive, label: "Ticket Log" },
-      { to: "/incidents", icon: AlertTriangle, label: "Timeline" },
+      { to: "/tickets", icon: Archive, label: "Tickets" },
       { to: "/handover", icon: FileText, label: "Shift Log" }
     ]
   },
@@ -34,7 +33,7 @@ const menuGroups = [
     items: [
       { to: "/settings/team", icon: Users, label: "Team", requiresLead: true },
       { to: "/settings/config", icon: Settings2, label: "Settings", requiresLead: true },
-      { to: "/docs", icon: Book, label: "User Manual" }
+
     ]
   }
 ];

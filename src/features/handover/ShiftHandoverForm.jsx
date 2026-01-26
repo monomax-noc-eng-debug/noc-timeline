@@ -54,23 +54,35 @@ const ShiftHandoverForm = memo(({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#121214] overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 overflow-hidden">
 
       {/* HEADER */}
-      <div className="shrink-0 px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm">
-        <div>
-          <h2 className="text-lg font-bold uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-            {isEditing ? <FileText size={20} className="text-[#0078D4]" /> : <Clock size={20} className="text-[#0078D4]" />}
-            {isEditing ? 'Edit Shift Log' : 'New Handover'}
+      <div className="shrink-0 px-4 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-3 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base sm:text-lg font-bold uppercase tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+            {isEditing ? <FileText size={20} className="text-[#0078D4] shrink-0" /> : <Clock size={20} className="text-[#0078D4] shrink-0" />}
+            <span className="truncate">{isEditing ? 'Edit Shift Log' : 'New Handover'}</span>
           </h2>
-          <p className="text-xs font-medium text-zinc-500 mt-0.5">Record details for the next shift team.</p>
+          <p className="text-xs font-medium text-zinc-500 mt-0.5 truncate">Record details for the next shift team.</p>
         </div>
 
-        {isEditing && (
-          <div className="px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wider border border-orange-100 dark:border-orange-900/30 flex items-center gap-1.5">
-            <AlertCircle size={12} /> Editing Mode
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {isEditing && (
+            <div className="px-2 sm:px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-orange-100 dark:border-orange-900/30 flex items-center gap-1.5">
+              <AlertCircle size={12} /> <span className="hidden sm:inline">Editing</span>
+            </div>
+          )}
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 transition-colors"
+              title="Close"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* SCROLLABLE BODY */}

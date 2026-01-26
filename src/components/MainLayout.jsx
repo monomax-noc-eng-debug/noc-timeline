@@ -6,6 +6,8 @@ import { authService } from '../services/authService';
 import Sidebar from './layouts/Sidebar';
 import ConfirmModal from './ui/ConfirmModal';
 import ErrorBoundary from './ui/ErrorBoundary';
+import { useAutoLogout } from '../hooks/useAutoLogout';
+import { ticketLogService } from '../services/ticketLogService';
 
 // Outlook-style color
 const OUTLOOK_BLUE = '#0078D4';
@@ -73,6 +75,21 @@ export default function MainLayout({ children }) {
 
   const closeLogoutModal = useCallback(() => {
     setIsLogoutModalOpen(false);
+  }, []);
+
+  // ✅ Auto-Logout (30 mins idle)
+  useAutoLogout();
+
+  // ✅ Auto-Sync on Mount (Once per day)
+  React.useEffect(() => {
+    const initSync = async () => {
+      try {
+        await ticketLogService.checkAndSyncTickets();
+      } catch (error) {
+        console.error("Auto-sync failed:", error);
+      }
+    };
+    initSync();
   }, []);
 
   return (

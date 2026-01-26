@@ -95,7 +95,7 @@ export default function WelcomePage() {
           {/* 2. Match Schedule */}
           {/* 2. Match Schedule */}
           <div
-            onClick={() => navigate('/schedule/today')}
+            onClick={() => navigate('/schedule/history')}
             className="group relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-5 cursor-pointer hover:border-[#0078D4] hover:shadow-md transition-all duration-200"
           >
             <div className="flex flex-col h-full justify-between gap-4">

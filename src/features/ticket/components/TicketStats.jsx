@@ -1,6 +1,6 @@
 // file: e:\Project-NOCNTT\noc-timeline\src\features\ticket\components\TicketStats.jsx
 import React, { memo } from 'react';
-import { FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, CheckCircle, Clock, AlertCircle, HelpCircle } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 /**
@@ -66,10 +66,17 @@ export default function TicketStats({ stats = {} }) {
       colorClass: 'text-red-500',
       borderColorClass: 'border-red-500',
     },
+    {
+      label: 'Requests',
+      value: stats?.requests || 0,
+      icon: HelpCircle,
+      colorClass: 'text-violet-500',
+      borderColorClass: 'border-violet-500',
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       {cards.map((card, i) => (
         <StatCard
           key={i}

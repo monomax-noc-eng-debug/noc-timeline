@@ -27,18 +27,19 @@ export const authService = {
    * @returns {Promise<Object>} User data
    */
   register: async ({ email, password, name, role = 'Viewer' }) => {
+    let createdUser = null;
     try {
       // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      createdUser = userCredential.user;
 
       // Update display name
-      await updateProfile(user, { displayName: name });
+      await updateProfile(createdUser, { displayName: name });
 
       // Create user profile in Firestore
       const userData = {
-        uid: user.uid,
-        email: user.email,
+        uid: createdUser.uid,
+        email: createdUser.email,
         name: name,
         role: role,
         createdAt: new Date().toISOString(),
@@ -46,10 +47,19 @@ export const authService = {
         isActive: true
       };
 
-      await setDoc(doc(db, USERS_COLLECTION, user.uid), userData);
+      await setDoc(doc(db, USERS_COLLECTION, createdUser.uid), userData);
 
       return userData;
     } catch (error) {
+      // CRITICAL: If Firestore write failed, delete the orphaned Auth user
+      if (createdUser) {
+        try {
+          await createdUser.delete();
+          console.warn('[authService] Rolled back orphaned Auth user after Firestore failure');
+        } catch (deleteError) {
+          console.error('[authService] Failed to rollback Auth user:', deleteError);
+        }
+      }
       throwFriendlyError(error);
     }
   },
@@ -101,6 +111,7 @@ export const authService = {
    * @returns {Promise<Object>} User data
    */
   loginWithGoogle: async () => {
+    let newUserCreated = null;
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -119,7 +130,9 @@ export const authService = {
           throw new Error('Account is disabled. Contact administrator.');
         }
       } else {
-        // New user, create profile
+        // New user - mark for potential rollback
+        newUserCreated = user;
+
         userData = {
           uid: user.uid,
           email: user.email,
@@ -136,6 +149,15 @@ export const authService = {
 
       return userData;
     } catch (error) {
+      // Rollback: If new user was created but Firestore failed, sign out
+      if (newUserCreated) {
+        try {
+          await signOut(auth);
+          console.warn('[authService] Signed out orphaned Google user after Firestore failure');
+        } catch (signOutError) {
+          console.error('[authService] Failed to sign out:', signOutError);
+        }
+      }
       if (error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in cancelled');
       }

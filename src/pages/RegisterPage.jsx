@@ -149,7 +149,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#f0f4f8] dark:bg-black p-4 font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 dark:bg-black p-4 font-sans">
       <div className="w-full max-w-[480px] bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
 
         {/* Header */}
@@ -221,7 +221,7 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="John Doe"
-                  className="w-full h-9 px-3 bg-white dark:bg-black border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
+                  className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
                   disabled={loading || googleLoading}
                 />
               </div>
@@ -239,7 +239,7 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="name@company.com"
-                  className="w-full h-9 px-3 bg-white dark:bg-black border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
+                  className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
                   disabled={loading || googleLoading}
                 />
               </div>
@@ -260,7 +260,7 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Minimum 6 characters"
-                  className="w-full h-9 px-3 bg-white dark:bg-black border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
+                  className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
                   disabled={loading || googleLoading}
                 />
                 <button
@@ -286,7 +286,7 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="Re-enter password"
-                  className="w-full h-9 px-3 bg-white dark:bg-black border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
+                  className="w-full h-9 px-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md focus:border-[#0078D4] focus:ring-1 focus:ring-[#0078D4] placeholder:text-zinc-400"
                   disabled={loading || googleLoading}
                 />
                 <button

@@ -90,21 +90,21 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className="h-full bg-zinc-50 dark:bg-black flex flex-col">
       {/* Header */}
-      <header className="shrink-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
+      <header className="shrink-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors mr-3"
           >
-            <ArrowLeft size={20} className="text-muted-foreground" />
+            <ArrowLeft size={20} className="text-zinc-500 dark:text-zinc-400" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-foreground uppercase tracking-tight">
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
               Change Password
             </h1>
-            <p className="text-[10px] font-semibold text-muted-foreground tracking-widest leading-none mt-0.5 hidden sm:block">
+            <p className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 tracking-widest leading-none mt-0.5 hidden sm:block">
               Update Your Account Password
             </p>
           </div>
@@ -114,21 +114,21 @@ export default function ChangePasswordPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Lock size={24} className="text-primary" />
+              <div className="w-12 h-12 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
+                <Lock size={24} className="text-[#0078D4]" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Password & Security</h2>
-                <p className="text-sm text-muted-foreground">Update your password to keep your account secure</p>
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Password & Security</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Update your password to keep your account secure</p>
               </div>
             </div>
 
             <form onSubmit={handleChangePassword} className="space-y-5">
               {/* Current Password */}
               <div>
-                <label className="block text-sm font-bold text-foreground mb-2">
+                <label className="block text-sm font-bold text-zinc-900 dark:text-white mb-2">
                   Current Password *
                 </label>
                 <div className="relative">
@@ -138,13 +138,13 @@ export default function ChangePasswordPage() {
                     value={passwordData.currentPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                     placeholder="Enter current password"
-                    className="pl-10 pr-10 bg-muted/50 h-12"
+                    className="pl-10 pr-10 bg-zinc-100/50 dark:bg-zinc-800/50 h-12 border-zinc-200 dark:border-zinc-700 focus:border-[#0078D4] focus:ring-[#0078D4]"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                   >
                     {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -202,9 +202,9 @@ export default function ChangePasswordPage() {
               </div>
 
               {/* Info Box */}
-              <div className="bg-muted/50 border border-border rounded-lg p-4">
-                <h3 className="text-sm font-bold text-foreground mb-2">Password Requirements:</h3>
-                <ul className="text-xs text-muted-foreground space-y-1">
+              <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4">
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-2">Password Requirements:</h3>
+                <ul className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
                   <li>• Minimum 6 characters long</li>
                   <li>• Should be different from your current password</li>
                   <li>• Use a strong, unique password</li>
@@ -226,7 +226,7 @@ export default function ChangePasswordPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+                  className="flex-1 bg-[#0078D4] text-white hover:bg-[#106EBE] font-bold"
                 >
                   {loading ? (
                     <>

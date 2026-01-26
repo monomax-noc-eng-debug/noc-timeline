@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { shiftService } from '../../../services/shiftService';
 import { useStore } from '../../../store/useStore';
+import { useAuth } from '../../../components/auth/AuthProvider';
 
 /**
  * Custom hook for Shift Handover Page Logic
@@ -10,10 +11,12 @@ import { useStore } from '../../../store/useStore';
 export const useShiftLogic = () => {
   const currentUser = useStore((state) => state.currentUser);
   const nocMembers = useStore((state) => state.nocMembers);
+  const { loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // Filter states
@@ -27,22 +30,36 @@ export const useShiftLogic = () => {
     toast({ description: message, variant: type === 'error' ? 'destructive' : 'default' });
   }, [toast]);
 
-  // 1. Real-time Subscription
+  // 1. Real-time Subscription with error handling
   useEffect(() => {
+    // Wait for auth to resolve before making subscription decisions
+    if (authLoading) return;
+
     if (!currentUser) {
       setHistory([]);
       setLoading(false);
       return;
     }
 
-    // Subscribe to Firebase/Backend
-    const unsubscribe = shiftService.subscribeHandovers((data) => {
-      setHistory(data || []); // Ensure array
+    // Error handler for subscription
+    const handleError = (err) => {
+      console.error('[useShiftLogic] Subscription error:', err);
+      setError(err.message || 'Failed to load handover logs');
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe && unsubscribe();
-  }, [currentUser]);
+    // Subscribe to Firebase/Backend with error callback
+    const unsubscribe = shiftService.subscribeHandovers(
+      (data) => {
+        setHistory(data || []); // Ensure array
+        setLoading(false);
+        setError(null);
+      },
+      handleError
+    );
+
+    return () => unsubscribe?.();
+  }, [currentUser, authLoading]);
 
   // 2. Filter Logic (Memoized)
   const filteredHistory = useMemo(() => {
@@ -123,6 +140,21 @@ export const useShiftLogic = () => {
       return;
     }
     const isAck = (log.acknowledgedBy || []).includes(memberName);
+
+    // Optimistic Update: Update local state immediately
+    setHistory(prev => prev.map(item => {
+      if (item.id === log.id) {
+        const currentAcked = item.acknowledgedBy || [];
+        return {
+          ...item,
+          acknowledgedBy: isAck
+            ? currentAcked.filter(name => name !== memberName)
+            : [...currentAcked, memberName]
+        };
+      }
+      return item;
+    }));
+
     try {
       await shiftService.toggleAcknowledge(log.id, memberName, isAck);
       showToast(isAck ? 'Acknowledgment removed' : 'Acknowledged ✓');
@@ -174,6 +206,7 @@ export const useShiftLogic = () => {
     filteredHistory,
     loading,
     saving,
+    error,
     stats,
     filterDate, setFilterDate,
     filterShift, setFilterShift,

@@ -130,22 +130,22 @@ export default function TeamManagementPage() {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className="h-full bg-zinc-50 dark:bg-black flex flex-col">
       {/* Header */}
-      <header className="shrink-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
+      <header className="shrink-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
               className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors"
             >
-              <ArrowLeft size={20} className="text-muted-foreground" />
+              <ArrowLeft size={20} className="text-zinc-500 dark:text-zinc-400" />
             </button>
             <div>
-              <h1 className="text-lg font-bold text-foreground uppercase tracking-tight">
+              <h1 className="text-lg font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
                 Team Management
               </h1>
-              <p className="text-[10px] font-medium uppercase text-muted-foreground tracking-widest leading-none mt-0.5 hidden sm:block">
+              <p className="text-[10px] font-medium uppercase text-zinc-500 dark:text-zinc-400 tracking-widest leading-none mt-0.5 hidden sm:block">
                 NOC Staff Directory & Access Control
               </p>
             </div>
@@ -173,7 +173,7 @@ export default function TeamManagementPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name or email..."
-                className="pl-10 bg-card border-border h-9 rounded-md"
+                className="pl-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 h-9 rounded-md"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function TeamManagementPage() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="h-9 px-4 bg-card border border-border rounded-md text-sm font-medium outline-none focus:ring-1 focus:ring-[#0078D4] transition-shadow"
+                className="h-9 px-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm font-medium outline-none focus:ring-1 focus:ring-[#0078D4] transition-shadow"
               >
                 <option>All</option>
                 {ROLE_OPTIONS.map(role => (
@@ -210,7 +210,7 @@ export default function TeamManagementPage() {
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted/30 border-b border-border">
+              <thead className="bg-zinc-100/50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
                   <th className="px-6 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Member
@@ -226,13 +226,13 @@ export default function TeamManagementPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
                     <tr
                       key={user.uid}
                       onClick={() => setViewingUser(user)}
-                      className="hover:bg-muted/30 transition-colors cursor-pointer"
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
@@ -240,10 +240,10 @@ export default function TeamManagementPage() {
                             {user.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-foreground">
+                            <p className="text-xs font-semibold text-zinc-900 dark:text-white">
                               {user.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
                               ID: {user.uid.substring(0, 8)}
                             </p>
                           </div>
@@ -291,7 +291,7 @@ export default function TeamManagementPage() {
           <div className="lg:hidden space-y-3">
             {filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
-                <div key={user.uid} className="bg-card border border-border rounded-md p-4 hover:shadow-sm transition-shadow">
+                <div key={user.uid} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#0078D4]/10 text-[#0078D4] flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
                       {user.name.charAt(0).toUpperCase()}
@@ -300,7 +300,7 @@ export default function TeamManagementPage() {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-bold text-foreground truncate">{user.name}</h3>
-                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1 mt-0.5">
                             <Mail size={12} />
                             {user.email}
                           </p>
@@ -446,14 +446,14 @@ function AddMemberModal({ onClose, onSuccess }) {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-bold text-foreground mb-2">
+          <label className="block text-sm font-bold text-zinc-900 dark:text-white mb-2">
             Full Name *
           </label>
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="John Doe"
-            className="bg-muted/50"
+            className="bg-zinc-100/50 dark:bg-zinc-800/50"
             disabled={loading}
           />
         </div>
@@ -467,7 +467,7 @@ function AddMemberModal({ onClose, onSuccess }) {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="john@example.com"
-            className="bg-muted/50"
+            className="bg-zinc-100/50 dark:bg-zinc-800/50"
             disabled={loading}
           />
         </div>
@@ -553,13 +553,13 @@ function ViewMemberModal({ user, onClose, onUpdate, onDelete }) {
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-bold text-foreground">{user.name}</h3>
-            <p className="text-sm text-muted-foreground">ID: {user.uid.substring(0, 8)}</p>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{user.name}</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">ID: {user.uid.substring(0, 8)}</p>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-muted-foreground tracking-widest mb-2">
+          <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-widest mb-2">
             Email
           </label>
           <div className="flex items-center gap-2 text-sm text-foreground">
@@ -599,7 +599,7 @@ function ViewMemberModal({ user, onClose, onUpdate, onDelete }) {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-border">
+        <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           {editing ? (
             <>
               <Button

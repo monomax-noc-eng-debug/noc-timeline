@@ -37,7 +37,10 @@ export const useShiftForm = (isOpen, initialData, currentUser, team, onSubmit) =
           onDuty: currentUserName ? [currentUserName] : [],
 
           status: 'Normal',
-          note: ''
+          note: '',
+
+          // ✅ FIX: Set createdBy to current user's name
+          createdBy: currentUserName || ''
         });
       }
       setErrors({});

@@ -57,7 +57,7 @@ const syncToSheet = async (action, data) => {
 
 export const ticketLogService = {
   // Subscribe to logs - use ticketNumber as primary key
-  subscribeLogs: (callback, limitCount = 50) => {
+  subscribeLogs: (callback, limitCount = 50, onError = null) => {
     const q = query(collection(db, LOGS_COL), orderBy("createdAt", "desc"), limit(limitCount));
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({
@@ -66,6 +66,10 @@ export const ticketLogService = {
         ...d.data()
       }));
       callback(data, snapshot.docs[snapshot.docs.length - 1]);
+    }, (error) => {
+      console.error("Firestore subscription error:", error);
+      if (onError) onError(error);
+      callback([], null); // Return empty to prevent infinite loading
     });
   },
 

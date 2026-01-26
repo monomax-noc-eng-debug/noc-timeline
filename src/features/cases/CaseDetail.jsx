@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { History, Activity, PenSquare, File, Calendar, Tag, Hash, Download } from 'lucide-react';
+import { History, Activity, PenSquare, File, Calendar, Tag, Hash, Download, ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import TimelineItem from './TimelineItem';
 import EventModal from './EventModal';
@@ -184,6 +184,15 @@ export default function IncidentDetailPanel({
         {/* Top Row: Case ID & Actions */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
+            {/* Back Button (Always visible) */}
+            <button
+              onClick={onBack}
+              className="p-1 -ml-1 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white mr-2"
+              title="Back to List"
+            >
+              <ChevronLeft size={24} />
+            </button>
+
             <span className="bg-[#0078D4] text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
               {incident.status}
             </span>

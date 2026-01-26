@@ -3,8 +3,8 @@ import { db } from './firebaseConfig';
 import { throwFriendlyError } from '../utils/firebaseErrorHandler';
 
 export const matchService = {
-  // Subscribe ข้อมูลแมตช์ (คงเดิม)
-  subscribeMatches: (dateFilter, callback) => {
+  // Subscribe ข้อมูลแมตช์ - with proper error handling
+  subscribeMatches: (dateFilter, callback, onError = null) => {
     let q = query(collection(db, "schedules"), orderBy("startDate", "desc"), orderBy("startTime", "asc"));
 
     if (dateFilter) {
@@ -16,6 +16,8 @@ export const matchService = {
       callback(data);
     }, (error) => {
       console.error("Match subscription error:", error);
+      if (onError) onError(error);
+      callback([]); // Return empty array to prevent infinite loading
     });
   },
 

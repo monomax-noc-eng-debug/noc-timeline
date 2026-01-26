@@ -8,6 +8,8 @@ export const useTicketLog = () => {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isError,
+    error,
   } = useInfiniteQuery({
     queryKey: ['ticketLogs'],
     queryFn: async ({ pageParam = null }) => {
@@ -32,7 +34,8 @@ export const useTicketLog = () => {
     total: logs.length,
     succeed: logs.filter(l => l.status?.toLowerCase() === 'succeed').length,
     pending: logs.filter(l => l.status?.toLowerCase() === 'pending').length,
-    incidents: logs.filter(l => l.status?.toLowerCase() === 'open' || l.type === 'Incident').length
+    incidents: logs.filter(l => l.status?.toLowerCase() === 'open' || l.type === 'Incident').length,
+    requests: logs.filter(l => l.type === 'Request').length
   };
 
   return {
@@ -41,6 +44,9 @@ export const useTicketLog = () => {
     loadingMore: isFetchingNextPage,
     hasMore: hasNextPage,
     loadMore: fetchNextPage,
-    stats
+    stats,
+    // Error handling
+    isError,
+    error: error?.message || null
   };
 };

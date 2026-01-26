@@ -9,15 +9,21 @@ import { configService } from '../services/configService';
 export function useTicketOptions() {
   const [ticketOptions, setTicketOptions] = useState(configService.getDefaultTicketOptions());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    const handleError = (err) => {
+      console.error('[useTicketOptions] Subscription error:', err);
+      setError(err.message || 'Failed to load ticket options');
+    };
+
     const unsubscribe = configService.subscribeTicketOptions((data) => {
       setTicketOptions(data);
       setLoading(false);
-    });
+    }, handleError);
 
     return () => unsubscribe();
   }, []);
 
-  return { ticketOptions, loading };
+  return { ticketOptions, loading, error };
 }

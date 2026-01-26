@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Search, Loader2, Filter, X, Download
 } from 'lucide-react';
@@ -89,7 +89,7 @@ const ShiftListItem = React.memo(({ data: log, onClick, isSelected, currentUser 
           </p>
 
           {/* Bottom: Badges */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <span className={cn(
               "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border",
               log.shift === 'Morning'
@@ -111,6 +111,12 @@ const ShiftListItem = React.memo(({ data: log, onClick, isSelected, currentUser 
             )}
             {isAcked && (
               <span className="text-[9px] font-bold text-[#0078D4]">✓ Acked</span>
+            )}
+            {/* On Duty Members */}
+            {log.onDuty && log.onDuty.length > 0 && (
+              <span className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[150px]" title={log.onDuty.join(', ')}>
+                👥 {log.onDuty.slice(0, 2).join(', ')}{log.onDuty.length > 2 ? ` +${log.onDuty.length - 2}` : ''}
+              </span>
             )}
           </div>
         </div>
@@ -151,6 +157,16 @@ export default function ShiftHandoverPage() {
     setSelectedLog(log);
     setPanelMode('view');
   }, []);
+
+  // Sync selectedLog with filteredHistory when data updates (e.g., after Acknowledge)
+  useEffect(() => {
+    if (selectedLog) {
+      const updatedLog = filteredHistory.find(log => log.id === selectedLog.id);
+      if (updatedLog && JSON.stringify(updatedLog) !== JSON.stringify(selectedLog)) {
+        setSelectedLog(updatedLog);
+      }
+    }
+  }, [filteredHistory, selectedLog]);
 
   const handleCreateNew = useCallback(() => {
     setSelectedLog(null);
@@ -233,7 +249,7 @@ export default function ShiftHandoverPage() {
 
         {/* LEFT: List */}
         <div className={cn(
-          "flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] transition-all",
+          "flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all",
           isPanelOpen ? "hidden lg:flex lg:w-[350px] xl:w-[400px]" : "w-full lg:w-[350px] xl:w-[400px]"
         )}>
           {/* List Header */}
@@ -272,10 +288,10 @@ export default function ShiftHandoverPage() {
           </div>
         </div>
 
-        {/* RIGHT: Detail / Form Panel */}
+        {/* RIGHT: Detail / Form Panel (Desktop only - lg and above) */}
         <div className={cn(
-          "flex-1 flex flex-col overflow-hidden bg-white dark:bg-zinc-900 transition-all",
-          !isPanelOpen && "hidden lg:flex"
+          "flex-1 flex-col overflow-hidden bg-white dark:bg-zinc-900 transition-all hidden lg:flex",
+          !isPanelOpen && "lg:items-center lg:justify-center"
         )}>
           {panelMode === 'view' && selectedLog ? (
             <ShiftDetailPanel
@@ -307,7 +323,7 @@ export default function ShiftHandoverPage() {
       {/* MOBILE: Bottom Sheet for Panel */}
       {isPanelOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/50 flex items-end">
-          <div className="w-full max-h-[90vh] bg-white dark:bg-zinc-900 rounded-t-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
+          <div className="w-full max-h-[90vh] bg-white dark:bg-zinc-900 rounded-t-2xl overflow-y-auto animate-in slide-in-from-bottom duration-300">
             {panelMode === 'view' && selectedLog ? (
               <ShiftDetailPanel
                 log={selectedLog}

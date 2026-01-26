@@ -200,175 +200,137 @@ export default function ConfigPage() {
     { id: 'broadcast', label: 'Broadcast', icon: Tv, desc: 'Channels, Leagues, CDN' },
     { id: 'tickets', label: 'Ticketing', icon: Tag, desc: 'Types, Severity, Status' },
     { id: 'org', label: 'Organization', icon: Users, desc: 'Projects, Teams' },
-    { id: 'system', label: 'System', icon: Settings, desc: 'Sync, Preferences' },
   ];
 
   return (
-    <div className="h-screen bg-zinc-50 dark:bg-black flex flex-col overflow-hidden">
+    <div className="h-screen bg-white dark:bg-zinc-950 flex flex-col overflow-hidden font-sans">
 
-      {/* Top Bar */}
-      <header className="shrink-0 h-14 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 z-40">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-            <ArrowLeft size={18} className="text-zinc-500" />
+      {/* Top Bar - Outlook Header Style */}
+      <header className="shrink-0 h-12 bg-[#0078D4] text-white flex items-center justify-between px-4 z-40 shadow-sm">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+            <ArrowLeft size={20} className="text-white" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-black">
-              <Settings size={16} />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold uppercase tracking-wide text-zinc-900 dark:text-white leading-none">Registry Hub</h1>
-              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">{configs.leagues?.length + configs.channels?.length || 0} Records</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <div className="font-semibold text-lg tracking-tight">Registry Hub</div>
+            <div className="h-4 w-px bg-white/30 hidden sm:block"></div>
+            <span className="text-xs font-medium text-white/80 hidden sm:block">{configs.leagues?.length + configs.channels?.length || 0} Configuration Items</span>
           </div>
         </div>
         {canEdit && (
           <Button
             onClick={handleSave}
             disabled={!hasChanges || saving}
-            className={cn("h-9 rounded-md px-6 font-semibold uppercase text-[10px] tracking-widest transition-all", hasChanges ? "bg-[#0078D4] hover:bg-[#106EBE] text-white shadow-sm" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400")}
+            className={cn("h-8 rounded-sm px-4 font-semibold text-xs tracking-wide transition-all bg-white text-[#0078D4] hover:bg-white/90 shadow-sm border-none", !hasChanges && "opacity-50 cursor-not-allowed")}
           >
             {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
-            {saving ? 'Saving...' : 'Commit Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         )}
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <nav className="w-64 shrink-0 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col py-4 overflow-y-auto hidden md:flex">
-          <div className="px-4 mb-2 text-[10px] font-semibold text-zinc-400 tracking-widest">Domains</div>
-          <div className="space-y-1 px-2">
+        {/* Sidebar - Outlook Navigation Pane Style */}
+        <nav className="w-[260px] shrink-0 bg-[#f0f0f0] dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col py-2 overflow-y-auto hidden md:flex">
+          <div className="px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Configuration Groups</div>
+          <div className="space-y-0.5 px-2">
             {MENUS.map(m => (
               <button
                 key={m.id}
                 onClick={() => setActiveCategory(m.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all",
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-sm text-left transition-all border-l-4",
                   activeCategory === m.id
-                    ? "bg-[#eff6fc] dark:bg-[#0078D4]/20 text-[#0078D4] dark:text-[#0078D4] shadow-sm font-semibold"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200"
+                    ? "bg-[#c7e0f4] dark:bg-[#0078D4]/20 border-[#0078D4] text-black dark:text-white"
+                    : "border-transparent text-zinc-600 dark:text-zinc-400 hover:bg-[#e1dfdd] dark:hover:bg-zinc-800"
                 )}
               >
-                <div className={cn("p-1.5 rounded-md", activeCategory === m.id ? "bg-white dark:bg-zinc-900 shadow-sm text-[#0078D4]" : "text-zinc-400 dark:text-zinc-500")}>
-                  <m.icon size={16} />
-                </div>
+                <m.icon size={18} className={cn(activeCategory === m.id ? "text-[#0078D4]" : "text-zinc-500")} />
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-wide leading-none mb-0.5">{m.label}</div>
-                  <div className="text-[9px] font-medium opacity-70">{m.desc}</div>
+                  <div className="text-sm font-medium leading-none">{m.label}</div>
+                  <div className="text-[10px] mt-1 opacity-70 truncate max-w-[140px]">{m.desc}</div>
                 </div>
-                {activeCategory === m.id && <ChevronRight size={14} className="ml-auto text-[#0078D4]" />}
               </button>
             ))}
           </div>
         </nav>
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden bg-zinc-50/50 dark:bg-black/50 p-4 md:p-6">
-          <div className="h-full w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Main Content Area - Outlook Reading Pane Style */}
+        <main className="flex-1 overflow-hidden bg-white dark:bg-zinc-950 p-6">
+          <div className="h-full w-full max-w-7xl mx-auto flex flex-col">
+            <div className="mb-6 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+              <h2 className="text-2xl font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                {MENUS.find(m => m.id === activeCategory)?.icon && React.createElement(MENUS.find(m => m.id === activeCategory)?.icon, { size: 24, className: "text-[#0078D4]" })}
+                {MENUS.find(m => m.id === activeCategory)?.label}
+              </h2>
+              <p className="text-sm text-zinc-500 mt-1">Manage your system configurations and dictionaries.</p>
+            </div>
 
-            {/* === BROADCAST PANEL === */}
-            {activeCategory === 'broadcast' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-                <SearchableListEditor
-                  title="Leagues" icon={Trophy}
-                  items={configs.leagues} {...createListActions(configs, setConfigs, 'leagues')} canEdit={canEdit}
-                />
-                <SearchableListEditor
-                  title="Channels" icon={Tv}
-                  items={configs.channels} {...createListActions(configs, setConfigs, 'channels')} canEdit={canEdit}
-                  placeholder="Add Channel..."
-                />
-                <SearchableListEditor
-                  title="CDN Providers" icon={Globe}
-                  items={configs.cdnOptions} {...CDNActions} canEdit={canEdit}
-                  placeholder="Add Provider..."
-                />
-              </div>
-            )}
-
-            {/* === TICKETS PANEL === */}
-            {activeCategory === 'tickets' && (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
-                <SearchableListEditor title="Types" icon={Tag} items={ticketOptions.types} {...createListActions(ticketOptions, setTicketOptions, 'types')} canEdit={canEdit} />
-                <SearchableListEditor title="Status" icon={CheckCircle} items={ticketOptions.statuses} {...createListActions(ticketOptions, setTicketOptions, 'statuses')} canEdit={canEdit} />
-                <SearchableListEditor title="Severity" icon={AlertTriangle} items={ticketOptions.severities} {...createListActions(ticketOptions, setTicketOptions, 'severities')} canEdit={canEdit} />
-                <SearchableListEditor title="Category" icon={Layers} items={ticketOptions.categories} {...createListActions(ticketOptions, setTicketOptions, 'categories')} canEdit={canEdit} />
-              </div>
-            )}
-
-            {/* === ORG PANEL === */}
-            {activeCategory === 'org' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full items-start">
-                <div className="lg:col-span-1 h-full flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {/* === BROADCAST PANEL === */}
+              {activeCategory === 'broadcast' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <SearchableListEditor
-                    title="Projects / Tenants"
-                    icon={LayoutPanelTop}
-                    items={projects}
-                    {...createListActions(projects, setProjects)}
-                    canEdit={canEdit}
+                    title="Leagues" icon={Trophy}
+                    items={configs.leagues} {...createListActions(configs, setConfigs, 'leagues')} canEdit={canEdit}
+                  />
+                  <SearchableListEditor
+                    title="Channels" icon={Tv}
+                    items={configs.channels} {...createListActions(configs, setConfigs, 'channels')} canEdit={canEdit}
+                    placeholder="Add Channel..."
+                  />
+                  <SearchableListEditor
+                    title="CDN Providers" icon={Globe}
+                    items={configs.cdnOptions} {...CDNActions} canEdit={canEdit}
+                    placeholder="Add Provider..."
                   />
                 </div>
+              )}
 
-                <div className="lg:col-span-2 h-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SearchableListEditor
-                    title="Responsibility Options"
-                    icon={Users}
-                    items={ticketOptions.responsibilities || []}
-                    {...createListActions(ticketOptions, setTicketOptions, 'responsibilities')}
-                    canEdit={canEdit}
-                    placeholder="Add Name..."
-                  />
-                  <SearchableListEditor
-                    title="Assignee Options"
-                    icon={Users}
-                    items={ticketOptions.assignees || []}
-                    {...createListActions(ticketOptions, setTicketOptions, 'assignees')}
-                    canEdit={canEdit}
-                    placeholder="Add Assignee..."
-                  />
+              {/* === TICKETS PANEL === */}
+              {activeCategory === 'tickets' && (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <SearchableListEditor title="Types" icon={Tag} items={ticketOptions.types} {...createListActions(ticketOptions, setTicketOptions, 'types')} canEdit={canEdit} />
+                  <SearchableListEditor title="Status" icon={CheckCircle} items={ticketOptions.statuses} {...createListActions(ticketOptions, setTicketOptions, 'statuses')} canEdit={canEdit} />
+                  <SearchableListEditor title="Severity" icon={AlertTriangle} items={ticketOptions.severities} {...createListActions(ticketOptions, setTicketOptions, 'severities')} canEdit={canEdit} />
+                  <SearchableListEditor title="Category" icon={Layers} items={ticketOptions.categories} {...createListActions(ticketOptions, setTicketOptions, 'categories')} canEdit={canEdit} />
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* === SYSTEM PANEL === */}
-            {activeCategory === 'system' && (
-              <div className="max-w-2xl mx-auto h-full overflow-y-auto">
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 flex items-center gap-3">
-                    <Zap size={18} className="text-[#0078D4]" />
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">Automated Sync</h3>
+              {/* === ORG PANEL === */}
+              {activeCategory === 'org' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                  <div className="lg:col-span-1 h-full flex flex-col gap-4">
+                    <SearchableListEditor
+                      title="Projects / Tenants"
+                      icon={LayoutPanelTop}
+                      items={projects}
+                      {...createListActions(projects, setProjects)}
+                      canEdit={canEdit}
+                    />
                   </div>
-                  <div className="p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-zinc-900 dark:text-white">Google Sheet Sync</div>
-                        <div className="text-xs text-zinc-500 mt-1">Automatically fetch ticket data daily.</div>
-                      </div>
-                      <Switch
-                        checked={configs.ticketSync?.autoSync}
-                        onCheckedChange={(c) => { markChanged(); setConfigs(p => ({ ...p, ticketSync: { ...p.ticketSync, autoSync: c } })); }}
-                        disabled={!canEdit}
-                        className="data-[state=checked]:bg-[#0078D4]"
-                      />
-                    </div>
-                    {configs.ticketSync?.autoSync && (
-                      <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-100 dark:border-zinc-800">
-                        <div className="flex items-center gap-3">
-                          <Clock size={16} className="text-zinc-400" />
-                          <span className="text-xs font-bold uppercase text-zinc-600 dark:text-zinc-300">Schedule Time</span>
-                        </div>
-                        <TimeInput
-                          value={configs.ticketSync?.syncTime || '08:00'}
-                          onChange={(e) => { markChanged(); setConfigs(p => ({ ...p, ticketSync: { ...p.ticketSync, syncTime: e.target.value } })); }}
-                          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-1 text-xs font-bold outline-none w-[100px] focus:border-[#0078D4]"
-                        />
-                      </div>
-                    )}
+
+                  <div className="lg:col-span-2 h-full grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <SearchableListEditor
+                      title="Responsibility Options"
+                      icon={Users}
+                      items={ticketOptions.responsibilities || []}
+                      {...createListActions(ticketOptions, setTicketOptions, 'responsibilities')}
+                      canEdit={canEdit}
+                      placeholder="Add Name..."
+                    />
+                    <SearchableListEditor
+                      title="Assignee Options"
+                      icon={Users}
+                      items={ticketOptions.assignees || []}
+                      {...createListActions(ticketOptions, setTicketOptions, 'assignees')}
+                      canEdit={canEdit}
+                      placeholder="Add Assignee..."
+                    />
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
           </div>
         </main>
@@ -386,7 +348,7 @@ export default function ConfigPage() {
             )}
           >
             <m.icon size={20} className={cn("mb-1", activeCategory === m.id && "fill-current opacity-20")} />
-            <span className="text-[9px] font-medium">{m.label.split(' ')[0]}</span>
+            <span className="text-[9px] font-medium">{m.label}</span>
           </button>
         ))}
       </div>

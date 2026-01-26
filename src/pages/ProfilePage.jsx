@@ -20,21 +20,21 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className="h-full bg-zinc-50 dark:bg-black flex flex-col">
       {/* Header */}
-      <header className="shrink-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
+      <header className="shrink-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors mr-3"
           >
-            <ArrowLeft size={20} className="text-muted-foreground" />
+            <ArrowLeft size={20} className="text-zinc-500 dark:text-zinc-400" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-foreground uppercase tracking-tight">
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-white uppercase tracking-tight">
               My Profile
             </h1>
-            <p className="text-[10px] font-medium uppercase text-muted-foreground tracking-widest leading-none mt-0.5 hidden sm:block">
+            <p className="text-[10px] font-medium uppercase text-zinc-500 dark:text-zinc-400 tracking-widest leading-none mt-0.5 hidden sm:block">
               Account Information
             </p>
           </div>
@@ -46,8 +46,8 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="grid gap-6">
             {/* Profile Information */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
                 <User size={20} className="text-[#0078D4]" />
                 Profile Information
               </h2>
@@ -59,8 +59,8 @@ export default function ProfilePage() {
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-foreground">{currentUser.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{currentUser.name}</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       Member since {new Date(currentUser.createdAt || Date.now()).getFullYear()}
                     </p>
                   </div>
@@ -68,22 +68,22 @@ export default function ProfilePage() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground tracking-widest mb-2">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-widest mb-2">
                     Email Address
                   </label>
-                  <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border border-border rounded-lg">
-                    <Mail size={18} className="text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">{currentUser.email}</span>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <Mail size={18} className="text-zinc-500 dark:text-zinc-400" />
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">{currentUser.email}</span>
                   </div>
                 </div>
 
                 {/* Role */}
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground tracking-widest mb-2">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-widest mb-2">
                     Role
                   </label>
                   <div className="flex items-center gap-3">
-                    <Shield size={18} className="text-muted-foreground" />
+                    <Shield size={18} className="text-zinc-500 dark:text-zinc-400" />
                     <span className={`inline-flex px-3 py-0.5 rounded text-xs font-semibold border ${ROLE_COLORS[currentUser.role]}`}>
                       {currentUser.role}
                     </span>
@@ -92,28 +92,28 @@ export default function ProfilePage() {
 
                 {/* User ID */}
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground tracking-widest mb-2">
+                  <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-widest mb-2">
                     User ID
                   </label>
-                  <div className="px-4 py-3 bg-muted/50 border border-border rounded-lg">
-                    <code className="text-sm font-mono text-foreground">{currentUser.uid}</code>
+                  <div className="px-4 py-3 bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                    <code className="text-sm font-mono text-zinc-900 dark:text-white">{currentUser.uid}</code>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Security Section */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                 <Lock size={20} className="text-[#0078D4]" />
                 Security
               </h2>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-zinc-100/30 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-800 rounded-lg">
                   <div>
-                    <h3 className="text-sm font-bold text-foreground">Password</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Password</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                       Last changed: {new Date(currentUser.updatedAt || Date.now()).toLocaleDateString()}
                     </p>
                   </div>
@@ -127,9 +127,9 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
-                <div className="bg-muted/50 border border-border rounded-md p-4">
-                  <h3 className="text-sm font-bold text-foreground mb-2">Security Tips:</h3>
-                  <ul className="text-xs text-muted-foreground space-y-1">
+                <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-md p-4">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-2">Security Tips:</h3>
+                  <ul className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
                     <li>• Use a strong, unique password</li>
                     <li>• Change your password regularly</li>
                     <li>• Never share your password with anyone</li>

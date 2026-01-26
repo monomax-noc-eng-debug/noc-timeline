@@ -1,5 +1,6 @@
 /**
  * Helper แปลง Link Google Drive ให้เป็นรูปภาพที่แสดงผลได้
+ * ใช้ CORS Proxy เพื่อแก้ปัญหา html2canvas โหลดรูปไม่ได้
  */
 export const getDirectImageUrl = (url) => {
   if (!url) return '';
@@ -12,7 +13,7 @@ export const getDirectImageUrl = (url) => {
         const dIndex = pathSegments.indexOf('d');
         if (dIndex !== -1 && pathSegments[dIndex + 1]) id = pathSegments[dIndex + 1];
       }
-      // ใช้รูปแบบ Thumbnail เพื่อให้แสดงผลในแอปได้โดยไม่ติด CORS
+      // ใช้รูปแบบ Thumbnail เพื่อให้แสดงผลในแอปได้ (Display Only)
       if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     }
     return url;

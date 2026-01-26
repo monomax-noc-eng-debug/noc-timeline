@@ -17,13 +17,12 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
-const TimelinePage = lazy(() => import('./pages/TimelinePage'));
 const ShiftHandoverPage = lazy(() => import('./pages/ShiftHandoverPage'));
-const TicketLogPage = lazy(() => import('./pages/TicketLogPage'));
 const HistoryPage = lazy(() => import('./pages/schedule/HistoryPage'));
-const DocsPage = lazy(() => import('./pages/DocsPage'));
+
 const ConfigPage = lazy(() => import('./pages/ConfigPage'));
 const TeamManagementPage = lazy(() => import('./pages/TeamManagementPage'));
+const OperationsPage = lazy(() => import('./pages/OperationsPage'));
 
 export default function App() {
   const darkMode = useStore((state) => state.darkMode);
@@ -58,11 +57,11 @@ export default function App() {
                     {/* ระบบ Schedule */}
                     <Route path="/schedule/history" element={<HistoryPage />} />
 
-                    {/* ระบบจัดการ Ticket */}
-                    <Route path="/tickets" element={<TicketLogPage />} />
+                    {/* ระบบจัดการ Ticket - Unified Operations Page */}
+                    <Route path="/tickets" element={<OperationsPage defaultView="table" />} />
 
-                    {/* ระบบ Timeline และ Incident */}
-                    <Route path="/incidents" element={<TimelinePage />} />
+                    {/* ระบบ Timeline และ Incident - Unified Operations Page */}
+                    <Route path="/incidents" element={<OperationsPage defaultView="timeline" />} />
 
                     {/* ระบบส่งเวร (Handover) */}
                     <Route path="/handover" element={<ShiftHandoverPage />} />
@@ -71,8 +70,7 @@ export default function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/profile/change-password" element={<ChangePasswordPage />} />
 
-                    {/* คู่มือการใช้งาน (Documentation) */}
-                    <Route path="/docs" element={<DocsPage />} />
+
 
                     {/* ระบบตั้งค่า Master Data - เฉพาะ NOC Lead เท่านั้น */}
                     <Route

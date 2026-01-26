@@ -1,0 +1,175 @@
+rules_version = '2';
+
+/**
+ * Firestore Security Rules for NOC Timeline
+ * 
+ * IMPORTANT: These rules must be deployed via Firebase Console or CLI.
+ * These rules enforce the same permission structure defined in src/utils/permissions.js
+ * 
+ * Roles Hierarchy:
+ * - NOC Lead: Full access (create, read, update, delete)
+ * - NOC Engineer: Standard access (create, read, update, limited delete)
+ * - Support: Read + limited actions (e.g., acknowledge handover)
+ * - Viewer: Read-only access
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Get current user's role from their user document
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Check if user has specific role
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    // Check if user is one of the allowed roles
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserData().role in roles;
+    }
+    
+    // Check if user account is active
+    function isActiveUser() {
+      return isAuthenticated() && getUserData().isActive == true;
+    }
+    
+    // Shorthand for common role checks
+    function isLeadOrEngineer() {
+      return hasAnyRole(['NOC Lead', 'NOC Engineer']);
+    }
+    
+    function isLead() {
+      return hasRole('NOC Lead');
+    }
+    
+    function canView() {
+      return hasAnyRole(['NOC Lead', 'NOC Engineer', 'Support', 'Viewer']);
+    }
+    
+    // ============================================================
+    // USER DOCUMENTS
+    // ============================================================
+    match /users/{userId} {
+      // Users can read their own profile
+      // NOC Lead can read all profiles
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isLead());
+      
+      // Only the user themselves can create their profile (during registration)
+      // Or NOC Lead can create for others
+      allow create: if isAuthenticated() && 
+        (request.auth.uid == userId || isLead());
+      
+      // Users can update their own profile (except role)
+      // NOC Lead can update any profile including role
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isActive'])) ||
+        isLead()
+      );
+      
+      // Only NOC Lead can delete users
+      allow delete: if isLead();
+    }
+    
+    // ============================================================
+    // INCIDENTS COLLECTION
+    // ============================================================
+    match /incidents/{incidentId} {
+      // Read: All authenticated users can view
+      allow read: if isActiveUser() && canView();
+      
+      // Create/Update: Only Lead and Engineer
+      allow create, update: if isActiveUser() && isLeadOrEngineer();
+      
+      // Delete: Only Lead
+      allow delete: if isActiveUser() && isLead();
+      
+      // Timeline Events Sub-collection
+      match /events/{eventId} {
+        allow read: if isActiveUser() && canView();
+        allow create, update: if isActiveUser() && isLeadOrEngineer();
+        allow delete: if isActiveUser() && isLead();
+      }
+    }
+    
+    // ============================================================
+    // TICKET LOGS COLLECTION
+    // ============================================================
+    match /ticket_logs/{ticketId} {
+      // Read: All authenticated users
+      allow read: if isActiveUser() && canView();
+      
+      // Create/Update: Only Lead and Engineer
+      allow create, update: if isActiveUser() && isLeadOrEngineer();
+      
+      // Delete: Only Lead
+      allow delete: if isActiveUser() && isLead();
+    }
+    
+    // ============================================================
+    // SHIFT HANDOVERS COLLECTION
+    // ============================================================
+    match /shift_handovers/{handoverId} {
+      // Read: All authenticated users
+      allow read: if isActiveUser() && canView();
+      
+      // Create/Update: Only Lead and Engineer
+      allow create, update: if isActiveUser() && isLeadOrEngineer();
+      
+      // Special case: Support can acknowledge (update acknowledgedBy field only)
+      allow update: if isActiveUser() && 
+        hasAnyRole(['NOC Lead', 'NOC Engineer', 'Support']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'updatedAt']);
+      
+      // Delete: Only Lead
+      allow delete: if isActiveUser() && isLead();
+    }
+    
+    // ============================================================
+    // MATCHES COLLECTION (Schedule)
+    // ============================================================
+    match /matches/{matchId} {
+      // Read: All authenticated users
+      allow read: if isActiveUser() && canView();
+      
+      // Create/Update/Delete: Only Lead and Engineer
+      allow create, update: if isActiveUser() && isLeadOrEngineer();
+      allow delete: if isActiveUser() && isLead();
+    }
+    
+    // ============================================================
+    // METADATA / CONFIG COLLECTIONS
+    // ============================================================
+    match /metadata/{docId} {
+      // Read: Lead and Engineer can view configs
+      allow read: if isActiveUser() && isLeadOrEngineer();
+      
+      // Write: Only Lead can modify configs
+      allow write: if isActiveUser() && isLead();
+    }
+    
+    // ============================================================
+    // SYSTEM SETTINGS (Sync logs, etc.)
+    // ============================================================
+    match /system_settings/{docId} {
+      // Read: All authenticated users (for sync status)
+      allow read: if isActiveUser();
+      
+      // Write: Only Lead and Engineer (for triggering syncs)
+      allow write: if isActiveUser() && isLeadOrEngineer();
+    }
+  }
+}

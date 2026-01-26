@@ -122,7 +122,7 @@ export const deleteIncident = async (id) => {
 /**
  * Subscribe to timeline events from the 'events' SUB-COLLECTION
  */
-export const subscribeEvents = (incidentId, callback) => {
+export const subscribeEvents = (incidentId, callback, onError = null) => {
   if (!incidentId) return () => { };
 
   // Ref to sub-collection: incidents/{id}/events
@@ -142,7 +142,11 @@ export const subscribeEvents = (incidentId, callback) => {
     }));
 
     callback(events);
-  }, (error) => console.error("Error subscribing to events sub-collection:", error));
+  }, (error) => {
+    console.error("Error subscribing to events sub-collection:", error);
+    if (onError) onError(error);
+    callback([]); // Return empty array to prevent loading hang
+  });
 };
 
 const sanitizeData = (data) => {

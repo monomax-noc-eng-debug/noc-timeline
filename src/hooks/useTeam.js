@@ -8,15 +8,21 @@ import { configService } from '../services/configService';
 export function useTeam() {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    const handleError = (err) => {
+      console.error('[useTeam] Subscription error:', err);
+      setError(err.message || 'Failed to load team');
+    };
+
     const unsubscribe = configService.subscribeTeam((data) => {
       setTeam(data);
       setLoading(false);
-    });
+    }, handleError);
 
     return () => unsubscribe();
   }, []);
 
-  return { team, loading };
+  return { team, loading, error };
 }

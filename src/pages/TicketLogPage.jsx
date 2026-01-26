@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 // Hooks & Services
 import { useTicketLog } from '../features/ticket/hooks/useTicketLog';
-import { useTicketAutoSync } from '../features/ticket/hooks/useTicketAutoSync';
+// import { useTicketAutoSync } from '../features/ticket/hooks/useTicketAutoSync';
 import incidentService from '../services/incidentService';
 import { ticketLogService } from '../services/ticketLogService';
 import { useStore } from '../store/useStore';
@@ -140,7 +140,7 @@ export default function TicketLogPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  useTicketAutoSync();
+  // useTicketAutoSync(); // Moved to MainLayout
 
   // Reset page when filters change
   const handleFilterChange = useCallback((setter, value) => {
@@ -396,7 +396,7 @@ export default function TicketLogPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="flex-1 overflow-y-auto flex flex-col">
                     {/* Desktop Table */}
                     <TicketTable
                       logs={paginatedLogs}

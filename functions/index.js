@@ -107,6 +107,15 @@ exports.scheduledTicketSync = onSchedule({
       console.log(`Committed batch of ${chunk.length} tickets.`);
     }
 
+    // Update sync_log for consistency with client-side status
+    const today = new Date().toISOString().split('T')[0];
+    await db.collection('system_settings').doc('sync_log').set({
+      lastSyncDate: today,
+      lastManualSync: new Date().toISOString(),
+      lastSyncType: 'scheduled',
+      updatedCount: updatedCount
+    }, { merge: true });
+
     console.log(`Sync complete. Processed ${updatedCount} tickets.`);
     return null;
 
